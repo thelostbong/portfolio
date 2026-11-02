@@ -67,71 +67,10 @@ function MetricsLine({ text }: { text: string }) {
   );
 }
 
-// Big figures down the right-hand side of a wide experience card.
-function StatColumn({ stats }: { stats: Stat[] }) {
-  return (
-    <dl className="grid content-center gap-x-6 gap-y-4 border-l border-cyan/20 pl-7" style={{ gridTemplateColumns: stats.length > 2 ? "repeat(2, minmax(0, 1fr))" : "minmax(0, 1fr)" }}>
-      {stats.map((s) => (
-        <div key={s.label}>
-          <dd className="font-display text-[clamp(26px,2.5vw,36px)] font-semibold leading-none text-cyan">{s.value}</dd>
-          <dt className="hud mt-1.5 text-[10px] leading-snug text-mist">{s.label}</dt>
-        </div>
-      ))}
-    </dl>
-  );
-}
-
-const experience = (): ReactNode[] => [
-  <article key="profile" className="project-card rail-card panel flex h-full shrink-0 flex-col overflow-hidden px-6 py-5">
-    <span className="hud text-cyan">Profile</span>
-    <div className="mt-3 grid min-h-0 flex-1 gap-8" style={{ gridTemplateColumns: "minmax(0,1.35fr) minmax(0,1fr)" }}>
-      <div className="flex min-h-0 flex-col">
-        <h2 className="font-display text-[clamp(28px,2.8vw,42px)] font-bold uppercase leading-[1.02] [@media(max-height:700px)]:text-[26px]">{profile.title}</h2>
-        <p className="mt-4 text-[clamp(14px,1.15vw,17px)] leading-relaxed text-bone/90 [@media(max-height:700px)]:mt-3 [@media(max-height:700px)]:text-[13px] [@media(max-height:700px)]:leading-snug">{profile.summary}</p>
-        <div className="mt-auto flex flex-wrap gap-2 pt-4">
-          {["AWS", "Kubernetes", "Terraform", "YOLO", "FastAPI", "MLflow"].map((c) => (
-            <span key={c} className="chip">{c}</span>
-          ))}
-        </div>
-      </div>
-      <StatColumn
-        stats={[
-          { value: "2 yrs", label: "production DevOps and cloud" },
-          { value: "2", label: "research assistant roles" },
-          { value: "1.8", label: "M.Eng grade" },
-        ]}
-      />
-    </div>
-  </article>,
-  ...experienceData.map((r) => (
-    <article key={r.id} className="project-card rail-card panel flex h-full shrink-0 flex-col overflow-hidden px-6 py-5">
-      <span className="hud text-cyan">
-        {r.start} to {r.end} // {r.duration}
-      </span>
-      <div className="mt-3 grid min-h-0 flex-1 gap-8" style={{ gridTemplateColumns: "minmax(0,1.35fr) minmax(0,1fr)" }}>
-        <div className="flex min-h-0 flex-col">
-          <h2 className="font-display text-[clamp(24px,2.3vw,34px)] font-bold uppercase leading-[1.04]">{r.title}</h2>
-          <p className="hud mt-1.5 text-mist">
-            {r.org} // {r.place}
-          </p>
-          <p className="mt-3 line-clamp-2 text-[clamp(15px,1.2vw,18px)] leading-snug text-bone">{r.headline}</p>
-          <ul className="mt-4 space-y-3 [@media(max-height:700px)]:hidden">
-            {r.bullets.map((b) => (
-              <li key={b.label} className="border-l-2 border-cyan/40 pl-3">
-                <p className="hud text-cyan">{b.label}</p>
-                <p className="mt-0.5 line-clamp-2 text-[13.5px] leading-snug text-bone/75">{b.text}</p>
-              </li>
-            ))}
-          </ul>
-        </div>
-        <StatColumn stats={r.stats} />
-      </div>
-      <div className="mt-2">
-        <DetailsButton k={r.id} label="Full details" />
-      </div>
-    </article>
-  )),
-];
+// Experience has no cards: the rail only scrolls, and ExpTimeline writes the roles along
+// the career line. These are the empty stops the rail moves between (profile + roles).
+const experience = (): ReactNode[] =>
+  [0, ...experienceData].map((_, i) => <div key={i} className="project-card h-full shrink-0" aria-hidden="true" />);
 
 const ownRepos = archive.filter((a) => a.kind === "original");
 

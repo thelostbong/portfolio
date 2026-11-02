@@ -5,7 +5,7 @@ import gsap from "gsap";
 import Lenis from "lenis";
 import { LOCK_MS, SECTIONS, loop, useHud, type Entry, type SectionId } from "@/lib/hud-store";
 import { SECTION_BLURB, cardsFor, detailFor } from "./cards";
-import ExpChart, { type ExpChartHandle } from "./ExpChart";
+import ExpTimeline, { type ExpTimelineHandle } from "./ExpTimeline";
 
 const pad = (n: number) => String(n).padStart(2, "0");
 
@@ -17,7 +17,7 @@ export default function Subscreen() {
   const railRef = useRef<HTMLDivElement>(null);
   const trackRef = useRef<HTMLDivElement>(null);
   const barRef = useRef<HTMLDivElement>(null);
-  const chartRef = useRef<ExpChartHandle>(null);
+  const chartRef = useRef<ExpTimelineHandle>(null);
   const counterRef = useRef<HTMLSpanElement>(null);
   const lenisRef = useRef<Lenis | null>(null);
   const panelRef = useRef<HTMLDivElement>(null);
@@ -383,12 +383,6 @@ export default function Subscreen() {
         </div>
       </div>
 
-      {active === "experience" && (
-        <div className="sub-head absolute right-[5vw] top-[12vh] h-[17vh] min-h-[96px] w-[min(540px,calc(69vw-420px))]" aria-hidden="false">
-          <ExpChart ref={chartRef} />
-        </div>
-      )}
-
       {/* Rail */}
       <div ref={railRef} className="rail absolute bottom-[11vh] left-[31vw] right-0 top-[29vh] cursor-grab">
         <div ref={trackRef} className={`flex h-full w-max items-stretch gap-6 ${active === "projects" || active === "experience" ? "project-track" : "pr-[8vw]"}`}>
@@ -399,6 +393,13 @@ export default function Subscreen() {
           ))}
         </div>
       </div>
+
+      {/* Experience: the roles written along the career line (sits above the rail so its buttons work) */}
+      {active === "experience" && (
+        <div className="sub-head pointer-events-none absolute bottom-[11vh] left-[31vw] right-[5vw] top-[12vh]">
+          <ExpTimeline ref={chartRef} />
+        </div>
+      )}
 
       {/* Detail panel */}
       {detail && (
