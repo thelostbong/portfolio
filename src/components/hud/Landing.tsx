@@ -240,8 +240,8 @@ export default function Landing() {
         <div className="panel p-2">
           <TerrainMap />
           <div className="hud mt-1 flex justify-between text-mist">
-            <span>Deggendorf, DE</span>
-            <span className="text-bone">48.84N 12.96E</span>
+            <span>Munich, DE</span>
+            <span className="text-bone">48.14N 11.58E</span>
           </div>
         </div>
       </div>

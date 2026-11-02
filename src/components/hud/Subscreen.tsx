@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useRef } from "react";
 import gsap from "gsap";
 import Lenis from "lenis";
 import { SECTIONS, useHud, type SectionId } from "@/lib/hud-store";
-import { SECTION_BLURB, cardsFor } from "./cards";
+import { SECTION_BLURB, cardsFor, detailFor } from "./cards";
 
 const pad = (n: number) => String(n).padStart(2, "0");
 
@@ -17,9 +17,20 @@ export default function Subscreen() {
   const barRef = useRef<HTMLDivElement>(null);
   const counterRef = useRef<HTMLSpanElement>(null);
   const lenisRef = useRef<Lenis | null>(null);
+  const panelRef = useRef<HTMLDivElement>(null);
+  const openerRef = useRef<HTMLElement | null>(null);
+  const detailKey = useHud((s) => s.detail);
+  const setDetail = useHud((s) => s.setDetail);
 
   const cards = useMemo(() => (active ? cardsFor(active) : []), [active]);
   const section = SECTIONS.find((s) => s.id === active);
+  const detail = useMemo(() => (active && detailKey ? detailFor(active, detailKey) : null), [active, detailKey]);
+
+  const closeDetail = useCallback(() => {
+    const el = panelRef.current;
+    if (!el) return setDetail(null);
+    gsap.to(el, { opacity: 0, y: 14, duration: 0.22, ease: "power2.in", onComplete: () => setDetail(null) });
+  }, [setDetail]);
 
   const close = useCallback(() => {
     const el = rootRef.current;
@@ -43,6 +54,7 @@ export default function Subscreen() {
 
     // Animations are time-based: never let a slow frame stall them.
     gsap.ticker.lagSmoothing(0);
+    wrapper.scrollLeft = 0; // every section starts at its first card
     const still = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     const lenis = new Lenis({
       wrapper,
@@ -72,7 +84,8 @@ export default function Subscreen() {
           best = Math.abs(r.left - wr.left);
           nearest = i;
         }
-        el.style.opacity = String(Math.max(0.35, 1 - Math.max(0, ad - 0.28) * 1.1));
+        // Cards leaving to the left fade out fully so they never ghost over the operator.
+        el.style.opacity = String(d < 0 ? Math.min(1, Math.max(0, 1 - Math.max(0, ad - 0.22) * 2.6)) : Math.max(0.35, 1 - Math.max(0, ad - 0.28) * 1.1));
         el.style.transform = `translate3d(0, ${Math.min(ad, 1) * 16}px, 0) scale(${1 - Math.min(ad, 1) * 0.045})`;
       });
       const p = lenis.limit > 0 ? lenis.scroll / lenis.limit : 0;
@@ -120,6 +133,7 @@ export default function Subscreen() {
     wrapper.addEventListener("click", swallowClick, true);
 
     const onKey = (e: KeyboardEvent) => {
+      if (useHud.getState().detail) return; // the detail panel owns the keyboard while open
       if (e.key === "Escape") close();
       else if (e.key === "ArrowRight") lenis.scrollTo(lenis.scroll + 520, { duration: 0.9 });
       else if (e.key === "ArrowLeft") lenis.scrollTo(lenis.scroll - 520, { duration: 0.9 });
@@ -146,6 +160,40 @@ export default function Subscreen() {
       lenisRef.current = null;
     };
   }, [active, close, go]);
+
+  // Detail panel: pause the rail, move focus in, keep Tab inside, Esc closes the panel only.
+  useEffect(() => {
+    const panel = panelRef.current;
+    if (!detailKey || !panel) return;
+    openerRef.current = document.activeElement as HTMLElement | null;
+    lenisRef.current?.stop();
+    gsap.fromTo(panel, { opacity: 0, y: 26 }, { opacity: 1, y: 0, duration: 0.4, ease: "power3.out" });
+    panel.focus();
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        e.preventDefault();
+        closeDetail();
+      } else if (e.key === "Tab") {
+        const f = Array.from(panel.querySelectorAll<HTMLElement>("a[href], button:not([disabled])"));
+        if (!f.length) return;
+        const first = f[0];
+        const last = f[f.length - 1];
+        if (e.shiftKey && (document.activeElement === first || document.activeElement === panel)) {
+          e.preventDefault();
+          last.focus();
+        } else if (!e.shiftKey && document.activeElement === last) {
+          e.preventDefault();
+          first.focus();
+        }
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => {
+      window.removeEventListener("keydown", onKey);
+      lenisRef.current?.start();
+      openerRef.current?.focus?.();
+    };
+  }, [detailKey, closeDetail]);
 
   if (!active || !section) return null;
 
@@ -189,7 +237,7 @@ export default function Subscreen() {
       </div>
 
       {/* Rail */}
-      <div ref={railRef} className="rail absolute bottom-[12vh] left-[31vw] right-0 top-[31vh] cursor-grab">
+      <div ref={railRef} className="rail absolute bottom-[11vh] left-[31vw] right-0 top-[29vh] cursor-grab">
         <div ref={trackRef} className="flex h-full w-max items-stretch gap-6 pr-[8vw]">
           {cards.map((c, i) => (
             <div key={i} data-slot className="flex h-full shrink-0 items-center">
@@ -198,6 +246,41 @@ export default function Subscreen() {
           ))}
         </div>
       </div>
+
+      {/* Detail panel */}
+      {detail && (
+        <div className="absolute inset-0 z-10">
+          <div className="absolute inset-0 bg-ink/80 backdrop-blur-[3px]" onClick={closeDetail} aria-hidden="true" />
+          <div
+            ref={panelRef}
+            role="dialog"
+            aria-modal="true"
+            aria-label={detail.title}
+            tabIndex={-1}
+            className="absolute bottom-[8vh] left-[31vw] right-[5vw] top-[12vh] outline-none"
+          >
+            <div className="panel flex h-full flex-col px-8 py-6">
+              <header className="flex items-start justify-between gap-6">
+                <div>
+                  <p className="hud text-cyan">{detail.tag}</p>
+                  <h3 className="mt-2 font-display text-[clamp(26px,2.8vw,40px)] font-bold uppercase leading-[1.02]">{detail.title}</h3>
+                  {detail.sub && <p className="hud mt-2 text-mist">{detail.sub}</p>}
+                </div>
+                <button
+                  type="button"
+                  onClick={closeDetail}
+                  className="hud shrink-0 border border-cyan/50 px-4 py-2 text-cyan transition-colors hover:bg-cyan hover:text-ink"
+                >
+                  Close <span className="text-mist">Esc</span>
+                </button>
+              </header>
+              <div className="card-scroll mt-5 min-h-0 flex-1 border-t border-cyan/20 pr-3 pt-5" data-lenis-prevent>
+                {detail.body}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Progress */}
       <div className="absolute bottom-[6vh] left-[31vw] right-[5vw] flex items-center gap-6">

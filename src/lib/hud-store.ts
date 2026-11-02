@@ -14,6 +14,8 @@ type HudState = {
   active: SectionId | null;
   hover: SectionId | null;
   ready: boolean; // operator model loaded and first frame drawn
+  detail: string | null; // key of the card whose detail panel is open
+  setDetail: (key: string | null) => void;
   setActive: (id: SectionId | null) => void;
   setHover: (id: SectionId | null) => void;
   setReady: (ready: boolean) => void;
@@ -23,7 +25,9 @@ export const useHud = create<HudState>((set) => ({
   active: null,
   hover: null,
   ready: false,
-  setActive: (active) => set({ active }),
+  detail: null,
+  setDetail: (detail) => set({ detail }),
+  setActive: (active) => set({ active, detail: null }),
   setHover: (hover) => set({ hover }),
   setReady: (ready) => set({ ready }),
 }));
