@@ -300,3 +300,11 @@ body {
 @media (prefers-reduced-motion: reduce) {
   .viz * { animation: none !important; opacity: revert-layer; }
 }
+
+/* ---- Experience career chart ---- */
+.exp-t { font-family: var(--font-hud); font-size: 10px; letter-spacing: 0.06em; fill: var(--color-mist); }
+.exp-head { font-size: 13px; font-weight: 700; fill: var(--color-bone); letter-spacing: 0.04em; }
+.exp-sub { font-size: 11px; fill: var(--color-cyan); }
+.exp-tip { font-size: 12px; font-weight: 700; fill: #bff3f7; }
+.exp-pulse { transform-box: fill-box; transform-origin: center; animation: exp-pulse 1.8s ease-out infinite; }
+@keyframes exp-pulse { 0% { transform: scale(0.6); opacity: 1; } 100% { transform: scale(1.7); opacity: 0; } }

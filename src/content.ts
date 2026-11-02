@@ -33,6 +33,7 @@ export type Role = {
   start: string;
   end: string;
   duration: string;
+  short: string; // label for the career chart
   headline: string; // one sentence for the summary card; the bullets live in the detail panel
   bullets: { label: string; text: string }[];
   stats: Stat[];
@@ -48,6 +49,7 @@ export const experience: Role[] = [
     start: "Feb 2026",
     end: "Jul 2026",
     duration: "6 months",
+    short: "THD · Computer Vision",
     headline: "Built a real-time, multi-camera defect-detection pipeline on Raspberry Pi 5 and linked it to Tulip MES.",
     bullets: [
       {
@@ -78,6 +80,7 @@ export const experience: Role[] = [
     start: "Sep 2025",
     end: "Dec 2025",
     duration: "4 months",
+    short: "THD · Statistical Modelling",
     headline: "Automated DOE and statistical analysis in R and Python. The pipeline now teaches DOE methodology at THD.",
     bullets: [
       {
@@ -106,6 +109,7 @@ export const experience: Role[] = [
     start: "Mar 2023",
     end: "Feb 2025",
     duration: "2 years",
+    short: "TCS · DevOps",
     headline: "Automated CI/CD and ran Kubernetes and AWS IoT infrastructure serving 10,000+ edge devices.",
     bullets: [
       {

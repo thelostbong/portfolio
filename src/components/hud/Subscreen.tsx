@@ -5,6 +5,7 @@ import gsap from "gsap";
 import Lenis from "lenis";
 import { LOCK_MS, SECTIONS, loop, useHud, type Entry, type SectionId } from "@/lib/hud-store";
 import { SECTION_BLURB, cardsFor, detailFor } from "./cards";
+import ExpChart, { type ExpChartHandle } from "./ExpChart";
 
 const pad = (n: number) => String(n).padStart(2, "0");
 
@@ -16,6 +17,7 @@ export default function Subscreen() {
   const railRef = useRef<HTMLDivElement>(null);
   const trackRef = useRef<HTMLDivElement>(null);
   const barRef = useRef<HTMLDivElement>(null);
+  const chartRef = useRef<ExpChartHandle>(null);
   const counterRef = useRef<HTMLSpanElement>(null);
   const lenisRef = useRef<Lenis | null>(null);
   const panelRef = useRef<HTMLDivElement>(null);
@@ -106,7 +108,7 @@ export default function Subscreen() {
     const total = slots.length;
     // Projects: one wide card fills the rail, its neighbours are blurred, and the rail
     // settles on a card whenever the wheel or the drag lets go.
-    const focusMode = active === "projects";
+    const focusMode = active === "projects" || active === "experience";
     let focused = -1;
     let raf = 0;
     const paint = (time: number) => {
@@ -144,6 +146,7 @@ export default function Subscreen() {
         focused = nearest;
         slots.forEach((el, i) => (i === nearest ? el.setAttribute("data-focus", "") : el.removeAttribute("data-focus")));
       }
+      if (chartRef.current && slots.length > 1) chartRef.current.set(lenis.scroll / Math.max(1, slots[1].offsetLeft - slots[0].offsetLeft));
       const p = lenis.limit > 0 ? lenis.scroll / lenis.limit : 0;
       if (barRef.current) barRef.current.style.transform = `scaleX(${Math.min(1, Math.max(0.02, p))})`;
       if (counterRef.current) counterRef.current.textContent = `${pad(nearest + 1)} / ${pad(total)}`;
@@ -380,9 +383,15 @@ export default function Subscreen() {
         </div>
       </div>
 
+      {active === "experience" && (
+        <div className="sub-head absolute right-[5vw] top-[12vh] h-[17vh] min-h-[96px] w-[min(540px,calc(69vw-420px))]" aria-hidden="false">
+          <ExpChart ref={chartRef} />
+        </div>
+      )}
+
       {/* Rail */}
       <div ref={railRef} className="rail absolute bottom-[11vh] left-[31vw] right-0 top-[29vh] cursor-grab">
-        <div ref={trackRef} className={`flex h-full w-max items-stretch gap-6 ${active === "projects" ? "project-track" : "pr-[8vw]"}`}>
+        <div ref={trackRef} className={`flex h-full w-max items-stretch gap-6 ${active === "projects" || active === "experience" ? "project-track" : "pr-[8vw]"}`}>
           {cards.map((c, i) => (
             <div key={i} data-slot className="flex h-full shrink-0 items-center">
               {c}
