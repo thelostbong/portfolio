@@ -12,3 +12,7 @@ Next.js (static export) + Three.js / React Three Fiber + GSAP + Lenis.
 npm run dev     # local dev server
 npm run build   # static export to ./out
 ```
+
+## Figma
+
+Design file: https://www.figma.com/design/8RRAoPLUl4VVrQdnkQ9r0A (pages: Foundations & Components, Screens, Tunnel & Prototype). Frame names follow design/figma-frames.md; mobile frames are prefixed M.

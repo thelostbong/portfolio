@@ -2,15 +2,17 @@
 
 /* Tokens come from design/tokens.json. Keep the two in sync. */
 @theme {
-  --color-sumi: #0b0b0c;
-  --color-ink: #131315;
-  --color-ink-2: #1b1b1e;
-  --color-line: #2a2a2e;
-  --color-paper: #ede8dc;
-  --color-ash: #8c887e;
-  --color-vermilion: #e5322d;
-  --color-vermilion-dim: #8e1f1c;
-  --color-gold: #b89b5e;
+  --color-night: #0a0b09;
+  --color-smoke: #121410;
+  --color-olive-dk: #1b1f16;
+  --color-olive: #2f3628;
+  --color-olive-lt: #3e4833;
+  --color-line: #2f3628;
+  --color-steel: #a7adb0;
+  --color-bone: #e7e4d8;
+  --color-ember: #f0561d;
+  --color-ember-dim: #8a2f10;
+  --color-hazard: #e7b73c;
 
   --font-display: "Barlow Condensed", "Arial Narrow", sans-serif;
   --font-body: "Barlow", system-ui, sans-serif;
@@ -26,12 +28,12 @@
 }
 
 html {
-  background: var(--color-sumi);
+  background: var(--color-night);
 }
 
 body {
-  background: var(--color-sumi);
-  color: var(--color-paper);
+  background: var(--color-night);
+  color: var(--color-bone);
   font-family: var(--font-body);
   font-size: 16px;
   line-height: 1.55;
@@ -70,7 +72,7 @@ body {
 }
 
 :focus-visible {
-  outline: 2px solid var(--color-gold);
+  outline: 2px solid var(--color-hazard);
   outline-offset: 2px;
 }
 
@@ -83,3 +85,72 @@ body {
     scroll-behavior: auto !important;
   }
 }
+
+/* ---- Warzone hero + crosshair ---- */
+.poster {
+  background: linear-gradient(to bottom, #05070a 0%, #12100e 40%, #34190d 62%, #8f3e14 76%, #c9661f 84%, #1a0c06 100%);
+}
+.vignette {
+  background: radial-gradient(ellipse at 50% 55%, transparent 45%, rgba(0, 0, 0, 0.72) 100%);
+}
+.radar {
+  position: relative;
+  width: 132px;
+  height: 132px;
+  border-radius: 50%;
+  border: 1px solid rgba(231, 228, 216, 0.35);
+  background: radial-gradient(circle, rgba(47, 54, 40, 0.55), rgba(10, 11, 9, 0.7));
+}
+.radar::before {
+  content: "";
+  position: absolute;
+  inset: 30px;
+  border-radius: 50%;
+  border: 1px solid rgba(231, 228, 216, 0.18);
+}
+.radar::after {
+  content: "";
+  position: absolute;
+  inset: calc(50% - 4px);
+  border-radius: 50%;
+  background: var(--color-hazard);
+  box-shadow: 30px -30px 0 -1px var(--color-ember), -36px 24px 0 -1px var(--color-ember), 36px 36px 0 -1px var(--color-hazard);
+}
+
+@media (pointer: fine) {
+  html.has-crosshair,
+  html.has-crosshair * {
+    cursor: none !important;
+  }
+}
+#crosshair {
+  position: fixed;
+  left: 0;
+  top: 0;
+  width: 0;
+  height: 0;
+  pointer-events: none;
+  z-index: 100;
+  --s: 0px;
+}
+#crosshair i {
+  position: absolute;
+  display: block;
+}
+#crosshair .tick {
+  background: var(--color-bone);
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.55);
+}
+#crosshair .h1, #crosshair .h2 { width: 14px; height: 2px; top: -1px; }
+#crosshair .v1, #crosshair .v2 { width: 2px; height: 14px; left: -1px; }
+#crosshair .h1 { left: calc(-7px - var(--s) - 12px); }
+#crosshair .h2 { left: calc(-7px + var(--s) + 12px); }
+#crosshair .v1 { top: calc(-7px - var(--s) - 12px); }
+#crosshair .v2 { top: calc(-7px + var(--s) + 12px); }
+#crosshair .dot { width: 4px; height: 4px; left: -2px; top: -2px; background: var(--color-ember); border-radius: 50%; box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.55); }
+#crosshair .ring { width: 56px; height: 56px; left: -28px; top: -28px; border: 1px solid rgba(231, 228, 216, 0.28); border-radius: 50%; transition: transform 0.15s, border-color 0.15s; }
+#crosshair.lock .ring { transform: scale(0.7); border-color: var(--color-ember); }
+#crosshair .hm { left: -14px; top: -14px; width: 28px; height: 28px; opacity: 0; transition: opacity 0.15s; }
+#crosshair.hit .hm { opacity: 1; }
+#crosshair .hm::before, #crosshair .hm::after { content: ""; position: absolute; left: 13px; top: -4px; width: 2px; height: 36px; background: var(--color-bone); transform: rotate(45deg); }
+#crosshair .hm::after { transform: rotate(-45deg); }

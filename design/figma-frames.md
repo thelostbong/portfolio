@@ -9,11 +9,11 @@ Create variables from `tokens.json`: colors, spacing scale, radius, and text sty
 | Component | Variants |
 |---|---|
 | HUD frame (chamfered panel) | default, hover, active |
-| Button | primary (vermilion), ghost, icon; default, hover, focus, disabled |
+| Button | primary (ember), ghost, icon; default, hover, focus, disabled |
 | Stat block | big number + HUD label; 1-up, 2-up, 4-up |
 | Mission card | featured (large), archive (compact), fork (dimmed); default, hover |
 | Detection box | box + label + confidence chip; used on hover over mission cards |
-| Reticle cursor | idle, locked, pressed |
+| Crosshair cursor | idle, moving (gaps spread), hit-marker (click) |
 | Slot (loadout) | empty, filled, active |
 | Ring gate (tunnel milestone) | role title + date + stat readouts |
 | Nav | desktop bar, mobile sheet |
@@ -22,7 +22,7 @@ Create variables from `tokens.json`: colors, spacing scale, radius, and text sty
 
 ## 02 Desktop 1440 (one frame per section)
 1. **Boot**: loader. Black screen, `DEPLOYING` in HUD mono, progress bar, tiny line of system text.
-2. **Hero / Operator card**: name in display type, role line, a 3D dog tag (name, role, `THD // GERMANY` stamped on it) in place of a portrait, one-line summary, buttons `Deploy` (scroll) and `Download CV`. Tunnel mouth visible behind.
+2. **Hero / Operator (Warzone)**: night battlefield (burning skyline, smoke, embers, tracers), original running-operator silhouette with orange rim light, a swinging steel dog tag as the title (MOHAMMED / NAYEEMUDDIN engraved, role and `THD // GERMANY` below), crosshair cursor, radar, kill-feed of project results, ammo-style mission counter, `Current objective` block with `Deploy` and `Download CV`. Reference render: `spikes/warzone-hero/index.html`.
 3. **Service Record**: three frames, one per role, each showing a ring gate with the stat readouts from `content.ts`.
 4. **Missions rail**: pinned frame with the first card centered, plus two more frames showing the rail mid-scroll. Giant outlined numerals 01 to 06 behind the cards.
 5. **Mission card hover**: card with the detection box and confidence chip drawn over it.
@@ -30,7 +30,7 @@ Create variables from `tokens.json`: colors, spacing scale, radius, and text sty
 7. **Mission Archive**: filter bar (language, topic, originals/forks), grid of compact cards, collapsed `Reference armory` strip for forks.
 8. **Loadout**: left, Pi 5 and camera rig scene area; right, four slots with items. One slot active.
 9. **Training and Comms**: two education entries, language badges.
-10. **Contact / Extraction**: LinkedIn (primary), GitHub, CV download. No email, phone, or address, and no form.
+10. **Contact / Extraction**: LinkedIn (primary), Email, GitHub, CV download, plus a details panel with email, phone and date of birth (published with the owner's approval, 2026-11-02). No postal address, no form.
 11. **Footer, short privacy note ("this site collects nothing"), 404**.
 
 ## 03 Mobile 390
@@ -54,3 +54,14 @@ Flows to wire: nav to every section; mission card to detail and back; archive fi
 
 ## Hand-off to Claude Code
 Name frames and layers exactly as above. Export the tokens as variables, one PNG per frame at 1x, and the project covers as separate assets. The dog tag is built in code, so no portrait asset is needed.
+
+## Theme: Warzone (2026-11-02)
+Palette: night, smoke, olive-dk, olive, olive-lt, steel, bone, ember, ember-dim, hazard (see tokens.json). Figma Color variables were renamed and recolored in place, so every frame picked up the palette. Hero frame 3:42 was redrawn; other frames keep their layouts. Service Record gates are labeled Deployment.
+
+### Warzone pass 2 (2026-11-02, later)
+- New components on the Components page: `Battlefield BG / Desktop` (1440x1000) and `/ Mobile` (390x1100), used as `battlefield-bg` behind Boot, Service Record, Extraction, 404 and their mobile frames.
+- `Reticle Cursor` is now `Crosshair Cursor` (Idle, Moving, Hit-marker).
+- Boot is a loading screen with a field tip; Extraction has an exfil zone marker; Service Record frames have a deployment marker per role.
+- Mission links read `View briefing`. Mobile hero rebuilt with the dog tag and operator.
+- Keyframe 04.01 is the hero at rest. The scroll tunnel stays as the dive after the hero (keyframes 02 to 06 unchanged).
+- The Figma file is the design source. The built hero lives in `src/components/Hero.tsx` and `src/lib/warzone-scene.js`.

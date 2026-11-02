@@ -12,8 +12,12 @@ export const operator = {
   tagline: "Training models that are just as confused as I am.", // GitHub bio, easter egg only
   summary:
     "Two years of production DevOps and cloud work at Tata Consultancy Services (AWS, Terraform, Kubernetes, GitLab CI/CD). At TH Deggendorf I applied that foundation to AI systems: real-time computer vision for factory-floor defect detection, and generative pipelines that turn product text into catalogue-ready imagery.",
-  // DOB and phone are intentionally absent. They stay on the PDF only.
-  // No email, phone, or postal address anywhere on the site. LinkedIn is the contact route.
+  // The user approved publishing DOB, phone and email (2026-11-02). No postal address.
+  contact: {
+    email: "nayeemuddin.mohammed@stud.th-deg.de",
+    phone: "+49 15563598740",
+    dob: "03.03.2001",
+  },
   links: {
     github: "https://github.com/thelostbong",
     linkedin: "https://linkedin.com/in/nayeemuddin-mohammed-03",
