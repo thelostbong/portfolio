@@ -7,11 +7,11 @@ import "@fontsource/barlow-condensed/700.css";
 import "@fontsource/jetbrains-mono/400.css";
 import "@fontsource/jetbrains-mono/500.css";
 import "./globals.css";
-import { operator } from "@/content";
+import { profile } from "@/content";
 
 export const metadata: Metadata = {
-  title: `${operator.name} | ${operator.title}`,
-  description: operator.summary,
+  title: `${profile.name} | ${profile.title}`,
+  description: profile.summary,
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {

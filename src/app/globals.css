@@ -1,18 +1,17 @@
 @import "tailwindcss";
 
-/* Tokens come from design/tokens.json. Keep the two in sync. */
+/* Tokens mirror design/tokens.json. Keep the two in sync. */
 @theme {
-  --color-night: #0a0b09;
-  --color-smoke: #121410;
-  --color-olive-dk: #1b1f16;
-  --color-olive: #2f3628;
-  --color-olive-lt: #3e4833;
-  --color-line: #2f3628;
-  --color-steel: #a7adb0;
-  --color-bone: #e7e4d8;
-  --color-ember: #f0561d;
-  --color-ember-dim: #8a2f10;
-  --color-hazard: #e7b73c;
+  --color-ink: #050d13;
+  --color-abyss: #08161e;
+  --color-deep: #0c202b;
+  --color-teal: #14414f;
+  --color-teal-lt: #1d6275;
+  --color-cyan: #38c8d8;
+  --color-cyan-dim: #1f7f8c;
+  --color-bone: #d9ece6;
+  --color-mist: #8fb3b8;
+  --color-alert: #b8374a;
 
   --font-display: "Barlow Condensed", "Arial Narrow", sans-serif;
   --font-body: "Barlow", system-ui, sans-serif;
@@ -24,56 +23,183 @@
 
 :root {
   color-scheme: dark;
-  --chamfer: 8px;
+  --line: rgb(56 200 216 / 0.24);
+  --line-strong: rgb(56 200 216 / 0.55);
 }
 
-html {
-  background: var(--color-night);
+html,
+body {
+  height: 100%;
+  background: var(--color-ink);
+  overflow: hidden;
 }
 
 body {
-  background: var(--color-night);
   color: var(--color-bone);
   font-family: var(--font-body);
   font-size: 16px;
-  line-height: 1.55;
+  line-height: 1.5;
   -webkit-font-smoothing: antialiased;
-}
-
-@media (min-width: 768px) {
-  body {
-    font-size: 18px;
-  }
-}
-
-/* Chamfered corners: top-left and bottom-right cut. */
-.chamfer {
-  clip-path: polygon(
-    var(--chamfer) 0,
-    100% 0,
-    100% calc(100% - var(--chamfer)),
-    calc(100% - var(--chamfer)) 100%,
-    0 100%,
-    0 var(--chamfer)
-  );
 }
 
 .hud {
   font-family: var(--font-hud);
   font-size: 11px;
-  letter-spacing: 0.08em;
+  letter-spacing: 0.1em;
   text-transform: uppercase;
 }
 
-@media (min-width: 768px) {
-  .hud {
-    font-size: 12px;
-  }
+:focus-visible {
+  outline: 2px solid var(--color-cyan);
+  outline-offset: 3px;
 }
 
-:focus-visible {
-  outline: 2px solid var(--color-hazard);
-  outline-offset: 2px;
+/* ---- Screen furniture ---- */
+
+/* Faint measurement grid over the whole screen. */
+.screen-grid {
+  background-image:
+    linear-gradient(to right, rgb(56 200 216 / 0.055) 1px, transparent 1px),
+    linear-gradient(to bottom, rgb(56 200 216 / 0.055) 1px, transparent 1px);
+  background-size: 64px 64px;
+  mask-image: radial-gradient(ellipse at 50% 50%, black 30%, transparent 85%);
+}
+
+/* Film grain via inline SVG turbulence. */
+.screen-grain {
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='180' height='180'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/></filter><rect width='100%' height='100%' filter='url(%23n)' opacity='0.5'/></svg>");
+  mix-blend-mode: overlay;
+  opacity: 0.16;
+}
+
+.screen-vignette {
+  background: radial-gradient(ellipse at 50% 46%, transparent 42%, rgb(2 7 10 / 0.7) 100%);
+}
+
+/* Slow horizontal scan band, like a refresh line. */
+@keyframes scan {
+  from {
+    transform: translateY(-20vh);
+  }
+  to {
+    transform: translateY(120vh);
+  }
+}
+.screen-scan {
+  background: linear-gradient(to bottom, transparent, rgb(56 200 216 / 0.045), transparent);
+  height: 18vh;
+  animation: scan 9s linear infinite;
+}
+
+/* ---- Panels and cards ---- */
+
+.panel {
+  position: relative;
+  background: linear-gradient(160deg, rgb(20 65 79 / 0.34), rgb(8 22 30 / 0.62));
+  border: 1px solid var(--line);
+  backdrop-filter: blur(6px);
+}
+.panel::before,
+.panel::after {
+  content: "";
+  position: absolute;
+  width: 14px;
+  height: 14px;
+  border: 0 solid var(--color-cyan);
+  pointer-events: none;
+}
+.panel::before {
+  top: -1px;
+  left: -1px;
+  border-top-width: 2px;
+  border-left-width: 2px;
+}
+.panel::after {
+  right: -1px;
+  bottom: -1px;
+  border-right-width: 2px;
+  border-bottom-width: 2px;
+}
+
+.chip {
+  display: inline-block;
+  border: 1px solid var(--line);
+  background: rgb(5 13 19 / 0.5);
+  padding: 3px 8px;
+  font-family: var(--font-hud);
+  font-size: 11px;
+  letter-spacing: 0.06em;
+  color: var(--color-bone);
+}
+
+.chip-alert {
+  background: var(--color-alert);
+  border-color: transparent;
+  color: #fff;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.numeral-outline {
+  color: transparent;
+  -webkit-text-stroke: 1px rgb(56 200 216 / 0.45);
+}
+
+/* Title glitch: two clipped copies drift apart for a moment. */
+@keyframes glitch-a {
+  0%, 92%, 100% { transform: translate(0); clip-path: inset(0 0 0 0); }
+  93% { transform: translate(-3px, 0); clip-path: inset(18% 0 55% 0); }
+  95% { transform: translate(3px, 0); clip-path: inset(62% 0 8% 0); }
+  97% { transform: translate(-2px, 0); clip-path: inset(40% 0 38% 0); }
+}
+.glitch {
+  position: relative;
+}
+.glitch::before,
+.glitch::after {
+  content: attr(data-text);
+  position: absolute;
+  inset: 0;
+  opacity: 0.8;
+  animation: glitch-a 7s steps(1) infinite;
+}
+.glitch::before {
+  color: var(--color-cyan);
+  mix-blend-mode: screen;
+}
+.glitch::after {
+  color: var(--color-alert);
+  mix-blend-mode: screen;
+  animation-delay: 0.12s;
+}
+
+/* Rail: no native scrollbar, Lenis drives it. */
+.rail {
+  overflow-x: auto;
+  overflow-y: hidden;
+  scrollbar-width: none;
+}
+.rail::-webkit-scrollbar {
+  display: none;
+}
+.rail-card {
+  will-change: transform, opacity;
+}
+.card-scroll {
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-teal-lt) transparent;
+}
+
+@keyframes spin-slow {
+  to {
+    transform: rotate(360deg);
+  }
+}
+@keyframes pulse-dot {
+  50% {
+    opacity: 0.25;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -81,76 +207,7 @@ body {
   *::before,
   *::after {
     animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
-    scroll-behavior: auto !important;
   }
 }
-
-/* ---- Warzone hero + crosshair ---- */
-.poster {
-  background: linear-gradient(to bottom, #05070a 0%, #12100e 40%, #34190d 62%, #8f3e14 76%, #c9661f 84%, #1a0c06 100%);
-}
-.vignette {
-  background: radial-gradient(ellipse at 50% 55%, transparent 45%, rgba(0, 0, 0, 0.72) 100%);
-}
-.radar {
-  position: relative;
-  width: 132px;
-  height: 132px;
-  border-radius: 50%;
-  border: 1px solid rgba(231, 228, 216, 0.35);
-  background: radial-gradient(circle, rgba(47, 54, 40, 0.55), rgba(10, 11, 9, 0.7));
-}
-.radar::before {
-  content: "";
-  position: absolute;
-  inset: 30px;
-  border-radius: 50%;
-  border: 1px solid rgba(231, 228, 216, 0.18);
-}
-.radar::after {
-  content: "";
-  position: absolute;
-  inset: calc(50% - 4px);
-  border-radius: 50%;
-  background: var(--color-hazard);
-  box-shadow: 30px -30px 0 -1px var(--color-ember), -36px 24px 0 -1px var(--color-ember), 36px 36px 0 -1px var(--color-hazard);
-}
-
-@media (pointer: fine) {
-  html.has-crosshair,
-  html.has-crosshair * {
-    cursor: none !important;
-  }
-}
-#crosshair {
-  position: fixed;
-  left: 0;
-  top: 0;
-  width: 0;
-  height: 0;
-  pointer-events: none;
-  z-index: 100;
-  --s: 0px;
-}
-#crosshair i {
-  position: absolute;
-  display: block;
-}
-#crosshair .tick {
-  background: var(--color-bone);
-  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.55);
-}
-#crosshair .h1, #crosshair .h2 { width: 14px; height: 2px; top: -1px; }
-#crosshair .v1, #crosshair .v2 { width: 2px; height: 14px; left: -1px; }
-#crosshair .h1 { left: calc(-7px - var(--s) - 12px); }
-#crosshair .h2 { left: calc(-7px + var(--s) + 12px); }
-#crosshair .v1 { top: calc(-7px - var(--s) - 12px); }
-#crosshair .v2 { top: calc(-7px + var(--s) + 12px); }
-#crosshair .dot { width: 4px; height: 4px; left: -2px; top: -2px; background: var(--color-ember); border-radius: 50%; box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.55); }
-#crosshair .ring { width: 56px; height: 56px; left: -28px; top: -28px; border: 1px solid rgba(231, 228, 216, 0.28); border-radius: 50%; transition: transform 0.15s, border-color 0.15s; }
-#crosshair.lock .ring { transform: scale(0.7); border-color: var(--color-ember); }
-#crosshair .hm { left: -14px; top: -14px; width: 28px; height: 28px; opacity: 0; transition: opacity 0.15s; }
-#crosshair.hit .hm { opacity: 1; }
-#crosshair .hm::before, #crosshair .hm::after { content: ""; position: absolute; left: 13px; top: -4px; width: 2px; height: 36px; background: var(--color-bone); transform: rotate(45deg); }
-#crosshair .hm::after { transform: rotate(-45deg); }

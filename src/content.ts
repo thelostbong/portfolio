@@ -4,7 +4,7 @@
 
 export type Stat = { value: string; label: string };
 
-export const operator = {
+export const profile = {
   name: "Nayeemuddin Mohammed",
   handle: "thelostbong",
   title: "AI Infrastructure / MLOps Engineer",
@@ -23,13 +23,6 @@ export const operator = {
     linkedin: "https://linkedin.com/in/nayeemuddin-mohammed-03",
     cv: "/Nayeemuddin_Mohammed_CV.pdf",
   },
-  // No portrait. The operator card is a 3D dog tag built in code.
-  emblem: "dogtag",
-  dogTag: {
-    line1: "NAYEEMUDDIN MOHAMMED",
-    line2: "AI INFRASTRUCTURE / MLOPS",
-    line3: "THD // GERMANY",
-  },
 } as const;
 
 export type Role = {
@@ -44,8 +37,8 @@ export type Role = {
   stats: Stat[];
 };
 
-// Service Record: one ring gate per role in the tunnel, newest first.
-export const serviceRecord: Role[] = [
+// Experience, newest first.
+export const experience: Role[] = [
   {
     id: "thd-cv",
     title: "Research Assistant, AI & Computer Vision",
@@ -134,10 +127,9 @@ export const serviceRecord: Role[] = [
   },
 ];
 
-export type Mission = {
+export type Project = {
   slug: string;
-  number: string; // ghost numeral behind the card
-  codename: string;
+  number: string; // index shown on the card
   title: string;
   repo: string | null; // GitHub repo name, null if not public
   objective: string;
@@ -148,12 +140,11 @@ export type Mission = {
   media: { cover: string; demo?: string }; // supplied by you, see asset list
 };
 
-// Featured missions: the horizontal rail. Six cards.
-export const featuredMissions: Mission[] = [
+// Featured projects. Six cards.
+export const projects: Project[] = [
   {
     slug: "lineguard",
     number: "01",
-    codename: "LINEGUARD",
     title: "AI-Based Automated Assembly Inspection with MES Integration",
     repo: "AI-Based-Automated-Assembly-Inspection-with-MES-Integration",
     objective:
@@ -173,7 +164,6 @@ export const featuredMissions: Mission[] = [
   {
     slug: "nano-sentry",
     number: "02",
-    codename: "NANO SENTRY",
     title: "Automated Defect Detection with Edge AI",
     repo: "Automated-Defect-Detection-using-Edge-AI",
     objective:
@@ -192,7 +182,6 @@ export const featuredMissions: Mission[] = [
   {
     slug: "threadline",
     number: "03",
-    codename: "THREADLINE",
     title: "Multimodal Generative AI Pipeline for Fashion",
     repo: "Fashion-article-image-generation",
     objective:
@@ -211,7 +200,6 @@ export const featuredMissions: Mission[] = [
   {
     slug: "impact-twin",
     number: "04",
-    codename: "IMPACT TWIN",
     title: "Zollhof Impact Digital Twin",
     repo: null, // Team hackathon project, no public repo. Add a link here if the team publishes one.
     objective:
@@ -229,7 +217,6 @@ export const featuredMissions: Mission[] = [
   {
     slug: "heartbeat",
     number: "05",
-    codename: "HEARTBEAT",
     title: "Fetal Health Classification, ML Pipeline",
     repo: "Fetal_Health_Classification_using_Machine_Learning",
     objective:
@@ -247,7 +234,6 @@ export const featuredMissions: Mission[] = [
   {
     slug: "stockpile",
     number: "06",
-    codename: "STOCKPILE",
     title: "Cost-Aware Demand Forecasting",
     repo: "Cost-aware-demand-forecasting",
     objective:
@@ -274,9 +260,7 @@ export type ArchiveEntry = {
   forkOf?: string;
 };
 
-// Mission Archive: every other public repo, listed in a filterable grid.
-// Refreshed from the GitHub API by scripts/sync-repos.ts at build time;
-// this array is the offline fallback.
+// Other public repositories. Forks are kept for reference but not shown.
 export const archive: ArchiveEntry[] = [
   {
     repo: "Queueing-Simulation-and-Optimization-System",
@@ -323,7 +307,7 @@ export const archive: ArchiveEntry[] = [
     topics: ["latex", "manufacturing", "case-study", "technical-report", "industry-40"],
     kind: "original",
   },
-  // Forks: shown collapsed under "Reference armory", clearly labelled as forks.
+  // Forks.
   {
     repo: "RobotIQ",
     title: "RobotIQ",
@@ -380,12 +364,11 @@ export const archive: ArchiveEntry[] = [
   },
 ];
 
-export type LoadoutSlot = { slot: string; group: string; items: string[] };
+export type SkillGroup = { group: string; items: string[] };
 
-// Skills in four slots. Items are copied from the resume's Technical Skills.
-export const loadout: LoadoutSlot[] = [
+// Skills in four groups. Items are copied from the resume's Technical Skills.
+export const skills: SkillGroup[] = [
   {
-    slot: "Primary",
     group: "ML / Computer Vision",
     items: [
       "YOLOv12", "OpenCV", "CLIP", "Hugging Face Transformers", "Scikit-learn",
@@ -393,7 +376,6 @@ export const loadout: LoadoutSlot[] = [
     ],
   },
   {
-    slot: "Secondary",
     group: "MLOps & Infrastructure",
     items: [
       "Docker", "Kubernetes", "Terraform", "GitLab CI/CD", "Jenkins", "MLflow",
@@ -401,12 +383,10 @@ export const loadout: LoadoutSlot[] = [
     ],
   },
   {
-    slot: "Equipment",
     group: "Edge & Embedded",
     items: ["Raspberry Pi 5", "ESP32", "MQTT", "CoAP", "REST API"],
   },
   {
-    slot: "Perks",
     group: "Programming",
     items: [
       "Python (NumPy, Pandas, FastAPI)", "R", "PostgreSQL",
@@ -415,7 +395,7 @@ export const loadout: LoadoutSlot[] = [
   },
 ];
 
-export const training = [
+export const education = [
   {
     school: "Technische Hochschule Deggendorf",
     place: "Cham, Germany",
@@ -434,7 +414,7 @@ export const training = [
   },
 ] as const;
 
-export const comms = [
+export const languages = [
   { language: "English", level: "Native" },
   { language: "German", level: "A2" },
 ] as const;
