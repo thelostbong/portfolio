@@ -1,9 +1,9 @@
 import Hero from "@/components/Hero";
+import ServiceRecord from "@/components/ServiceRecord";
 import Nav from "@/components/Nav";
 import Crosshair from "@/components/Crosshair";
 import {
   operator,
-  serviceRecord,
   featuredMissions,
   archive,
   loadout,
@@ -39,35 +39,8 @@ export default function Home() {
       <Crosshair />
       <Nav />
       <Hero />
+    <ServiceRecord />
     <main className="mx-auto max-w-[1440px] px-5 md:px-16">
-      <section id="service-record" className="border-t border-line py-20">
-        <h2 className="font-display text-[32px] font-bold uppercase md:text-5xl">Service Record</h2>
-        <div className="mt-10 space-y-14">
-          {serviceRecord.map((r) => (
-            <article key={r.id}>
-              <p className="hud text-steel">
-                {r.start} to {r.end} // {r.duration}
-              </p>
-              <h3 className="mt-2 font-display text-[22px] font-semibold uppercase md:text-3xl">
-                {r.title}
-              </h3>
-              <p className="text-steel">
-                {r.org}, {r.place}
-              </p>
-              <StatRow stats={r.stats} />
-              <ul className="mt-6 max-w-3xl space-y-3">
-                {r.bullets.map((b) => (
-                  <li key={b.label}>
-                    <span className="font-medium text-bone">{b.label}. </span>
-                    <span className="text-bone/90">{b.text}</span>
-                  </li>
-                ))}
-              </ul>
-            </article>
-          ))}
-        </div>
-      </section>
-
       <section id="missions" className="border-t border-line py-20">
         <h2 className="font-display text-[32px] font-bold uppercase md:text-5xl">Missions</h2>
         <div className="mt-10 grid gap-6 md:grid-cols-2 lg:grid-cols-3">
