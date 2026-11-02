@@ -138,6 +138,7 @@ export type Project = {
   repo: string | null; // GitHub repo name, null if not public
   objective: string;
   summary: string;
+  metricsLine: string; // one sentence that ties the metrics together; *asterisks* mark the figures
   stack: string[];
   stats: Stat[];
   topics: string[];
@@ -155,6 +156,8 @@ export const projects: Project[] = [
       "Replace manual visual inspection on an assembly line with real-time, multi-camera defect detection.",
     summary:
       "Three cameras feed a YOLOv12s ONNX model on a Raspberry Pi 5. Results post straight into a Tulip MES, with an offline queue so records stay complete and duplicate-free.",
+    metricsLine:
+      "*95% mAP@50* across *16 product variants*, with inference under *500ms* and the full edge-to-MES round trip under *one second*.",
     stack: ["YOLOv12s", "ONNX", "Raspberry Pi 5", "Python", "REST API", "Tulip MES"],
     stats: [
       { value: "95%", label: "mAP@50" },
@@ -174,6 +177,8 @@ export const projects: Project[] = [
       "Run defect classification on a microcontroller, with no cloud and no GPU at inference.",
     summary:
       "A two-stage YOLOv11n pipeline for colour and missing-piece defects, quantized to INT8 and running on-device on an ESP32-P4.",
+    metricsLine:
+      "*Over 95%* detection accuracy in *under 2s* per inference, with a false-positive rate below *5%*, entirely on a microcontroller.",
     stack: ["YOLOv11n", "INT8 quantization", "ESP32-P4", "ESP-IDF", "Python"],
     stats: [
       { value: ">95%", label: "detection accuracy" },
@@ -192,6 +197,8 @@ export const projects: Project[] = [
       "Turn German product copy into catalogue-ready fashion images, built with NKD.",
     summary:
       "Four models in sequence: Helsinki-NLP translation, Phi-3 Mini for prompt writing, FLUX.1-schnell with a LoRA for generation, and CLIP scoring to pick the keepers.",
+    metricsLine:
+      "*87.6%* of images pass on the first try at about *42s* each, for roughly *90% lower cost* than a photo shoot.",
     stack: ["Helsinki-NLP (MarianMT)", "Phi-3 Mini", "FLUX.1-schnell + LoRA", "CLIP", "PyTorch"],
     stats: [
       { value: "87.6%", label: "first-pass success" },
@@ -210,6 +217,8 @@ export const projects: Project[] = [
       "Score a startup's impact against recognised frameworks, inside an 8-hour hackathon build.",
     summary:
       "Built with my team in TypeScript at the Claude Impact Lab Hackathon in Nuremberg. One Claude Opus call returns a Zod-validated, multi-dimensional impact profile against the IMP framework, IRIS+ themes, and UN SDG targets, shipped live as a Vercel serverless API.",
+    metricsLine:
+      "Built in *8 hours*, with a single Claude Opus call producing each impact profile.",
     stack: ["TypeScript", "Claude Opus", "Zod", "Vercel serverless"],
     stats: [
       { value: "8h", label: "build window" },
@@ -227,6 +236,8 @@ export const projects: Project[] = [
       "Classify cardiotocography readings as Normal, Suspect, or Pathological without leaking test data.",
     summary:
       "Logistic Regression, Random Forest, and SVM compared, with SMOTE applied inside the training pipeline so nothing leaks into the test set.",
+    metricsLine:
+      "*94.6%* accuracy and *94.4%* F1 across Normal, Suspect and Pathological cases.",
     stack: ["Python", "scikit-learn", "SMOTE", "Random Forest"],
     stats: [
       { value: "94.6%", label: "accuracy" },
@@ -244,6 +255,8 @@ export const projects: Project[] = [
       "Pick the forecasting model that minimises inventory cost, not the one with the best accuracy score.",
     summary:
       "ARIMA, SARIMA, and Prophet backtested on DataCo order data with an expanding window. Plain ARIMA won both categories on total inventory cost, because SARIMA's seasonal term overfit the smaller backtest windows.",
+    metricsLine:
+      "*3 models* backtested, and plain ARIMA won *both categories* on total inventory cost.",
     stack: ["Python", "ARIMA", "SARIMA", "Prophet", "Jupyter"],
     stats: [
       { value: "3", label: "models backtested" },
@@ -413,6 +426,7 @@ export const education = [
     place: "Chennai, India",
     degree: "B.Tech in Mechanical Engineering",
     result: "CGPA: 9.03",
+    germanGrade: "1.4",
     start: "Jun 2019",
     end: "May 2023",
   },

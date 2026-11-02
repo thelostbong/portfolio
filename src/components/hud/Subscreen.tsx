@@ -104,6 +104,10 @@ export default function Subscreen() {
 
     const slots = Array.from(content.querySelectorAll<HTMLElement>("[data-slot]"));
     const total = slots.length;
+    // Projects: one wide card fills the rail, its neighbours are blurred, and the rail
+    // settles on a card whenever the wheel or the drag lets go.
+    const focusMode = active === "projects";
+    let focused = -1;
     let raf = 0;
     const paint = (time: number) => {
       lenis.raf(time);
@@ -113,6 +117,19 @@ export default function Subscreen() {
       let best = Infinity;
       slots.forEach((el, i) => {
         const r = el.getBoundingClientRect();
+        if (focusMode) {
+          const d = (r.left - wr.left) / r.width; // 0 = this card is the one in view
+          const ad = Math.abs(d);
+          if (ad < best) {
+            best = ad;
+            nearest = i;
+          }
+          el.style.opacity = String(d < 0 ? Math.max(0, 1 - ad * 2.4) : 1 - Math.min(d, 1) * 0.45);
+          el.style.filter = ad > 0.02 ? `blur(${(Math.min(1, ad * 3) * 6).toFixed(2)}px)` : "";
+          el.style.transform = `scale(${1 - Math.min(ad, 1) * 0.04})`;
+          return;
+        }
+        if (el.style.filter) el.style.filter = "";
         const d = (r.left + r.width / 2 - cx) / wr.width; // -1..1 around the focus line
         const ad = Math.abs(d);
         if (Math.abs(r.left - wr.left) < best) {
@@ -123,12 +140,46 @@ export default function Subscreen() {
         el.style.opacity = String(d < 0 ? Math.min(1, Math.max(0, 1 - Math.max(0, ad - 0.22) * 2.6)) : Math.max(0.35, 1 - Math.max(0, ad - 0.28) * 1.1));
         el.style.transform = `translate3d(0, ${Math.min(ad, 1) * 16}px, 0) scale(${1 - Math.min(ad, 1) * 0.045})`;
       });
+      if (nearest !== focused) {
+        focused = nearest;
+        slots.forEach((el, i) => (i === nearest ? el.setAttribute("data-focus", "") : el.removeAttribute("data-focus")));
+      }
       const p = lenis.limit > 0 ? lenis.scroll / lenis.limit : 0;
       if (barRef.current) barRef.current.style.transform = `scaleX(${Math.min(1, Math.max(0.02, p))})`;
       if (counterRef.current) counterRef.current.textContent = `${pad(nearest + 1)} / ${pad(total)}`;
       raf = requestAnimationFrame(paint);
     };
     raf = requestAnimationFrame(paint);
+
+    // Settling on a card (projects only).
+    let anchor = entry === "end" ? total - 1 : 0;
+    let snapTimer = 0;
+    const slotAt = (i: number) => Math.min(slots[i].offsetLeft, maxScroll());
+    const nearestSlot = (t: number) => {
+      let k = 0;
+      slots.forEach((_, i) => {
+        if (Math.abs(slotAt(i) - t) < Math.abs(slotAt(k) - t)) k = i;
+      });
+      return k;
+    };
+    const snap = () => {
+      if (!alive || !focusMode || useHud.getState().detail) return;
+      if (performance.now() < loop.lockUntil) return;
+      const t = lenis.targetScroll;
+      const delta = t - slotAt(anchor);
+      let idx = nearestSlot(t);
+      // A deliberate push always moves one card on, however short the flick.
+      if (delta > 36) idx = Math.max(idx, Math.min(total - 1, anchor + 1));
+      else if (delta < -36) idx = Math.min(idx, Math.max(0, anchor - 1));
+      else idx = anchor;
+      anchor = idx;
+      if (Math.abs(slotAt(idx) - t) > 1) lenis.scrollTo(slotAt(idx), { duration: 0.75 });
+    };
+    const scheduleSnap = () => {
+      if (!focusMode) return;
+      window.clearTimeout(snapTimer);
+      snapTimer = window.setTimeout(snap, 150);
+    };
 
     // Mouse drag to scroll. Touch is handled by Lenis' own sync.
     let startX = 0;
@@ -152,6 +203,7 @@ export default function Subscreen() {
       }
     };
     const up = () => {
+      if (dragging && moved > 6) scheduleSnap();
       dragging = false;
       wrapper.style.cursor = "";
     };
@@ -191,6 +243,7 @@ export default function Subscreen() {
         from = edges();
       }
       lastWheel = now;
+      scheduleSnap();
       const forward = d > 0;
       if ((forward && from.end) || (!forward && from.start)) {
         pushed += Math.abs(d);
@@ -211,10 +264,16 @@ export default function Subscreen() {
       else if (e.key === "ArrowRight") {
         if (edges().end) {
           if (!locked) step(1);
+        } else if (focusMode) {
+          anchor = Math.min(total - 1, nearestSlot(lenis.targetScroll) + 1);
+          lenis.scrollTo(slotAt(anchor), { duration: 0.9 });
         } else lenis.scrollTo(lenis.targetScroll + 520, { duration: 0.9 });
       } else if (e.key === "ArrowLeft") {
         if (edges().start) {
           if (!locked) step(-1);
+        } else if (focusMode) {
+          anchor = Math.max(0, nearestSlot(lenis.targetScroll) - 1);
+          lenis.scrollTo(slotAt(anchor), { duration: 0.9 });
         } else lenis.scrollTo(lenis.targetScroll - 520, { duration: 0.9 });
       } else if (e.key === "ArrowDown" || e.key === "PageDown") {
         if (!locked) step(1);
@@ -242,6 +301,7 @@ export default function Subscreen() {
       window.removeEventListener("wheel", onWheel);
       alive = false;
       window.clearTimeout(unlock);
+      window.clearTimeout(snapTimer);
       lenis.destroy();
       lenisRef.current = null;
     };
@@ -322,7 +382,7 @@ export default function Subscreen() {
 
       {/* Rail */}
       <div ref={railRef} className="rail absolute bottom-[11vh] left-[31vw] right-0 top-[29vh] cursor-grab">
-        <div ref={trackRef} className="flex h-full w-max items-stretch gap-6 pr-[8vw]">
+        <div ref={trackRef} className={`flex h-full w-max items-stretch gap-6 ${active === "projects" ? "project-track" : "pr-[8vw]"}`}>
           {cards.map((c, i) => (
             <div key={i} data-slot className="flex h-full shrink-0 items-center">
               {c}

@@ -4,6 +4,7 @@ import type { ReactNode } from "react";
 import type { Stat } from "@/content";
 import { archive, languages as languageData, projects as projectData, skills as skillData, profile, experience as experienceData, education as educationData } from "@/content";
 import { useHud, type SectionId } from "@/lib/hud-store";
+import Viz from "./viz";
 
 // Every card is a fixed-size panel and never scrolls inside. Anything that does not
 // fit is in the detail panel, opened with the Details button.
@@ -35,21 +36,34 @@ function Stats({ stats, cols, size = "md" }: { stats: Stat[]; cols?: number; siz
   );
 }
 
-const btn = "hud inline-flex items-center gap-2 border border-cyan/60 px-4 py-2 text-cyan transition-colors hover:bg-cyan hover:text-ink";
-
 function Link({ href, children }: { href: string; children: ReactNode }) {
   return (
-    <a href={href} target={href.startsWith("http") ? "_blank" : undefined} rel="noreferrer" className={btn}>
-      {children} <span aria-hidden="true">→</span>
+    <a href={href} target={href.startsWith("http") ? "_blank" : undefined} rel="noreferrer" className="ghost-btn">
+      {children} <span className="sign" aria-hidden="true">→</span>
     </a>
   );
 }
 
 function DetailsButton({ k, label = "Details" }: { k: string; label?: string }) {
   return (
-    <button type="button" onClick={() => useHud.getState().setDetail(k)} className={`${btn} bg-cyan/10`} aria-haspopup="dialog">
-      {label} <span aria-hidden="true">+</span>
+    <button type="button" onClick={() => useHud.getState().setDetail(k)} className="ghost-btn plus" aria-haspopup="dialog">
+      {label} <span className="sign" aria-hidden="true">+</span>
     </button>
+  );
+}
+
+// "*95%* of parts" -> the starred runs are the figures, shown bright.
+function MetricsLine({ text }: { text: string }) {
+  return (
+    <p className="text-[15px] leading-snug text-bone/90">
+      {text.split("*").map((part, i) =>
+        i % 2 ? (
+          <strong key={i} className="font-semibold text-cyan">{part}</strong>
+        ) : (
+          <span key={i}>{part}</span>
+        ),
+      )}
+    </p>
   );
 }
 
@@ -93,38 +107,40 @@ const ownRepos = archive.filter((a) => a.kind === "original");
 
 const projects = (): ReactNode[] => [
   ...projectData.map((m) => (
-    <Card key={m.slug} tag="Featured project">
-      <h2 className="font-display text-[clamp(20px,1.9vw,26px)] font-bold uppercase leading-[1.04]">{m.title}</h2>
-      <p className="mt-2 line-clamp-2 text-[14.5px] leading-snug text-bone">{m.objective}</p>
+    <article key={m.slug} className="project-card rail-card panel flex h-full shrink-0 flex-col overflow-hidden px-6 py-5">
+      <h2 className="font-display text-[clamp(22px,2vw,28px)] font-bold uppercase leading-none">{m.title}</h2>
+      <div className="mt-3 min-h-0 flex-1">
+        <Viz slug={m.slug} />
+      </div>
+      <div className="mt-3">
+        <MetricsLine text={m.metricsLine} />
+      </div>
       <div className="mt-3 flex flex-wrap gap-1.5">
         {m.stack.map((s) => (
           <span key={s} className="chip">{s}</span>
         ))}
       </div>
-      <div className="mt-auto">
-        <Stats stats={m.stats} />
-        <div className="mt-3 flex flex-wrap items-center gap-3">
-          <DetailsButton k={m.slug} />
-          {m.repo ? <Link href={`${profile.links.github}/${m.repo}`}>Repository</Link> : <span className="hud text-mist">Team project // no public repo</span>}
-        </div>
+      <div className="mt-2 flex flex-wrap items-center gap-6">
+        <DetailsButton k={m.slug} />
+        {m.repo ? <Link href={`${profile.links.github}/${m.repo}`}>Repository</Link> : <span className="hud text-mist">Team project // no public repo</span>}
       </div>
-    </Card>
+    </article>
   )),
-  <Card key="more" tag="More work">
-    <h2 className="font-display text-[clamp(22px,2vw,28px)] font-bold uppercase leading-[1.04]">Other repositories</h2>
-    <ul className="mt-3 space-y-2">
+  <article key="more" className="project-card rail-card panel flex h-[320px] max-h-full shrink-0 flex-col overflow-hidden px-6 py-5">
+    <h2 className="font-display text-[clamp(22px,2vw,28px)] font-bold uppercase leading-none">Other repositories</h2>
+    <ul className="mt-5 grid min-h-0 flex-1 grid-cols-2 content-start gap-x-10 gap-y-4 overflow-hidden">
       {ownRepos.map((a) => (
         <li key={a.repo} className="flex items-baseline justify-between gap-3 border-l-2 border-cyan/40 pl-3">
-          <span className="truncate font-display text-[16px] font-semibold uppercase leading-tight">{a.title}</span>
+          <span className="truncate font-display text-[18px] font-semibold uppercase leading-tight">{a.title}</span>
           <span className="hud shrink-0 text-mist">{a.language}</span>
         </li>
       ))}
     </ul>
-    <div className="mt-auto flex flex-wrap items-center gap-3">
+    <div className="mt-3 flex flex-wrap items-center gap-6">
       <DetailsButton k="archive" />
       <Link href={profile.links.github}>All of GitHub</Link>
     </div>
-  </Card>,
+  </article>,
 ];
 
 const skills = (): ReactNode[] =>
@@ -145,8 +161,21 @@ const education = (): ReactNode[] => [
       <h2 className="font-display text-[32px] font-bold uppercase leading-[1.02]">{t.degree}</h2>
       <p className="mt-3 text-[16px] text-bone">{t.school}</p>
       <p className="hud mt-1 text-mist">{t.place}</p>
-      <p className="mt-6 font-display text-[44px] font-semibold leading-none text-cyan">{t.result.replace(/^[^:]+:\s*/, "")}</p>
-      <p className="hud mt-1 text-mist">{t.result.split(":")[0]}</p>
+      <div className="mt-6 flex items-start gap-5">
+        <div>
+          <p className="font-display text-[44px] font-semibold leading-none text-cyan">{t.result.replace(/^[^:]+:\s*/, "")}</p>
+          <p className="hud mt-1 text-mist">{t.result.split(":")[0]}</p>
+        </div>
+        {"germanGrade" in t && (
+          <>
+            <span aria-label="approximately equal to" className="font-display text-[40px] font-medium leading-none text-bone">≈</span>
+            <div>
+              <p className="font-display text-[44px] font-semibold leading-none text-cyan">{t.germanGrade}</p>
+              <p className="hud mt-1 text-mist">German scale</p>
+            </div>
+          </>
+        )}
+      </div>
     </Card>
   )),
   <Card key="lang" short tag="Languages">

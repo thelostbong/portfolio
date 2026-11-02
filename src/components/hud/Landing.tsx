@@ -8,7 +8,7 @@ type Callout = { id: SectionId; side: "left" | "right"; top: string; meta: strin
 
 const CALLOUTS: Callout[] = [
   { id: "education", side: "left", top: "22%", meta: "M.Eng in Applied AI for Digital Production Management" },
-  { id: "experience", side: "left", top: "40%", meta: "DevOps, IoT, Edge AI, MES" },
+  { id: "experience", side: "left", top: "40%", meta: "DevOps, Computer Vision, Machine Learning" },
   { id: "projects", side: "right", top: "19%", meta: `${projectData.length} featured` },
   { id: "skills", side: "right", top: "44%", meta: `${skillData.length} groups` },
 ];
@@ -206,14 +206,17 @@ export default function Landing() {
       </nav>
 
       {/* Bottom left: status */}
-      <div className="absolute bottom-[10.5vh] left-[7vw] w-[250px]">
-        <span className="chip chip-alert">Status</span>
-        <p className="mt-3 font-display text-2xl font-semibold uppercase leading-tight">Open to work</p>
-        <dl className="hud mt-3 grid grid-cols-[auto_1fr] gap-x-4 gap-y-1 text-mist">
-          <dt>Region</dt>
+      <div className="absolute bottom-[10vh] left-[7vw] w-[340px]">
+        <span className="chip chip-alert inline-flex items-center gap-2 !px-3 !py-1 !text-[12px]">
+          <span className="h-2 w-2 rounded-full bg-white" style={{ animation: "pulse-dot 1.6s infinite" }} />
+          Status
+        </span>
+        <p className="mt-3 font-display text-[44px] font-bold uppercase leading-none tracking-wide text-bone">Open to work</p>
+        <dl className="mt-4 grid grid-cols-[auto_1fr] gap-x-5 gap-y-1.5 border-l-2 border-cyan pl-4 font-hud text-[13px] uppercase leading-snug tracking-[0.08em]">
+          <dt className="text-mist">Region</dt>
           <dd className="text-bone">Germany</dd>
-          <dt>Focus</dt>
-          <dd className="text-bone">MLOps, computer vision, edge AI</dd>
+          <dt className="text-mist">Focus</dt>
+          <dd className="text-cyan">MLOps, computer vision, edge AI</dd>
         </dl>
       </div>
 
@@ -231,7 +234,7 @@ export default function Landing() {
       {/* Name plate */}
       <div className="pointer-events-none absolute inset-x-0 bottom-[17vh] flex flex-col items-center">
         <h1
-          className="glitch font-display text-[clamp(44px,5.6vw,96px)] font-bold uppercase leading-[0.92] tracking-[0.02em] text-bone"
+          className="glitch font-display text-[clamp(24px,2.1vw,38px)] font-bold uppercase leading-none tracking-[0.12em] text-bone"
           data-text={profile.name}
         >
           {profile.name}
@@ -242,9 +245,14 @@ export default function Landing() {
       </div>
 
       {/* Scroll hint */}
-      <div className="pointer-events-none absolute inset-x-0 bottom-[11vh] flex flex-col items-center gap-1">
-        <span className="hud text-bone">Scroll to explore</span>
-        <span aria-hidden="true" className="block h-3 w-3 rotate-45 border-b border-r border-cyan" style={{ animation: "pulse-dot 2s infinite" }} />
+      <div className="pointer-events-none absolute inset-x-0 bottom-[10vh] flex flex-col items-center gap-1">
+        <span className="font-display text-[clamp(17px,1.35vw,22px)] font-bold uppercase tracking-[0.34em] text-[#bff3f7] [text-shadow:0_0_18px_rgb(56_200_216/0.8)]">
+          Scroll to explore
+        </span>
+        <span aria-hidden="true" className="scroll-chevrons flex flex-col items-center">
+          <i />
+          <i />
+        </span>
       </div>
 
       {/* Contact bar */}
@@ -261,11 +269,9 @@ export default function Landing() {
             <span className="font-display text-lg font-semibold tracking-wide text-cyan transition-colors group-hover:text-bone">{l.value}</span>
           </a>
         ))}
-        <a
-          href={profile.links.cv}
-          className="hud border border-cyan/60 bg-cyan/10 px-5 py-1.5 text-cyan transition-colors hover:bg-cyan hover:text-ink"
-        >
-          CV
+        <a href={profile.links.cv} className="group flex items-baseline gap-2">
+          <span className="font-display text-lg font-semibold uppercase tracking-[0.18em] text-cyan transition-colors group-hover:text-bone">CV</span>
+          <span aria-hidden="true" className="text-cyan transition-transform group-hover:translate-x-1">→</span>
         </a>
       </div>
     </div>

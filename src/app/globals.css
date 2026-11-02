@@ -211,3 +211,92 @@ body {
     transition-duration: 0.01ms !important;
   }
 }
+
+
+/* ---- Scroll hint chevrons ---- */
+.scroll-chevrons i {
+  display: block;
+  width: 14px;
+  height: 14px;
+  margin-top: -5px;
+  border-right: 2.5px solid #bff3f7;
+  border-bottom: 2.5px solid #bff3f7;
+  transform: rotate(45deg);
+  filter: drop-shadow(0 0 6px rgb(56 200 216 / 0.9));
+  animation: chevron 1.5s ease-in-out infinite;
+}
+.scroll-chevrons i:nth-child(2) {
+  animation-delay: 0.25s;
+}
+@keyframes chevron {
+  0% { opacity: 0; transform: translateY(-6px) rotate(45deg); }
+  50% { opacity: 1; }
+  100% { opacity: 0; transform: translateY(8px) rotate(45deg); }
+}
+
+/* ---- Card buttons: no box, brighter text and signs ---- */
+.ghost-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 2px;
+  font-family: var(--font-hud);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: #bff3f7;
+  text-shadow: 0 0 14px rgb(56 200 216 / 0.55);
+  transition: color 0.2s;
+}
+.ghost-btn .sign {
+  font-size: 18px;
+  line-height: 1;
+  color: var(--color-cyan);
+  text-shadow: 0 0 12px rgb(56 200 216 / 0.9);
+  transition: transform 0.25s var(--ease-out);
+}
+.ghost-btn:hover {
+  color: #fff;
+}
+.ghost-btn:hover .sign {
+  transform: translateX(4px);
+}
+.ghost-btn.plus:hover .sign {
+  transform: rotate(90deg);
+}
+
+/* ---- Projects: one card fills the rail, neighbours are blurred ---- */
+.project-card {
+  width: min(calc(69vw - 96px), 940px);
+}
+.project-track {
+  padding-right: max(96px, calc(69vw - 940px));
+}
+
+/* ---- Project scenes (SVG, drawn in viz.tsx) ---- */
+.viz svg { overflow: hidden; }
+.viz .vz-f   { fill: rgb(56 200 216 / 0.1); stroke: var(--color-cyan-dim); stroke-width: 1.2; }
+.viz .vz-fb  { fill: rgb(20 65 79 / 0.38); stroke: rgb(56 200 216 / 0.45); stroke-width: 1.1; }
+.viz .vz-s   { fill: none; stroke: var(--color-cyan); stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
+.viz .vz-sb  { fill: none; stroke: var(--color-bone); stroke-width: 1.5; stroke-linecap: round; }
+.viz .vz-sm  { fill: none; stroke: var(--color-mist); stroke-width: 1.5; stroke-linecap: round; }
+.viz .vz-sd  { fill: none; stroke: rgb(143 179 184 / 0.4); stroke-width: 1; }
+.viz .vz-a   { fill: rgb(184 55 74 / 0.18); stroke: #e0566b; stroke-width: 1.6; }
+.viz .vz-fillc { fill: var(--color-cyan); stroke: none; }
+.viz .vz-fillb { fill: var(--color-bone); stroke: none; }
+.viz .vz-fillm { fill: var(--color-mist); stroke: none; }
+.viz .vz-shirt { fill: rgb(184 55 74 / 0.8); stroke: rgb(217 236 230 / 0.35); stroke-width: 1; }
+.viz .vz-t   { font-family: var(--font-hud); font-size: 11px; letter-spacing: 0.04em; fill: var(--color-mist); }
+.viz .vz-tc  { fill: var(--color-cyan); }
+.viz .vz-tb  { fill: var(--color-bone); }
+.viz .vz-ta  { fill: #ef6a7f; }
+.viz .vz-big { font-family: var(--font-display); font-size: 28px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; }
+
+/* Only the card in focus animates; the rest hold still behind the blur. */
+[data-slot]:not([data-focus]) .viz *,
+[data-slot]:not([data-focus]) .viz { animation-play-state: paused !important; }
+
+@media (prefers-reduced-motion: reduce) {
+  .viz * { animation: none !important; opacity: revert-layer; }
+}
