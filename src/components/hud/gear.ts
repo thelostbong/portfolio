@@ -136,7 +136,7 @@ export function buildGear(
   tablet.add(screen);
   tablet.rotation.set(-0.22, -0.28, 0.06);
   const handBase = worldOf(B.lHand);
-  add(tablet, B.lHand, new THREE.Vector3(handBase.x - 0.03, handBase.y + 0.015, handBase.z + 0.09), "position");
+  add(tablet, B.lHand, new THREE.Vector3(handBase.x - 0.015, handBase.y + 0.09, handBase.z + 0.145), "position");
 
   let lastDraw = -1;
   function drawScreen(t: number) {

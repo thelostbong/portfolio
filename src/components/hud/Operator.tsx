@@ -25,6 +25,11 @@ const B = {
   rHand: "mixamorigRightHand",
 } as const;
 
+// Left hand finger chains, base joint to tip, for the tablet grip.
+const FINGERS = ["Thumb", "Index", "Middle", "Ring", "Pinky"].flatMap((f) =>
+  [1, 2, 3, 4].map((i) => `mixamorigLeftHand${f}${i}`),
+);
+
 const _q = new THREE.Quaternion();
 const _q2 = new THREE.Quaternion();
 const _v = new THREE.Vector3();
@@ -114,6 +119,10 @@ export default function Operator() {
       const o = scene.getObjectByName(n);
       if (o) bones.current[n] = o;
     });
+    FINGERS.forEach((n) => {
+      const o = scene.getObjectByName(n);
+      if (o) bones.current[n] = o;
+    });
     scene.updateMatrixWorld(true);
     const gear = buildGear(root, bones.current, B);
     gearRef.current = gear;
@@ -152,6 +161,20 @@ export default function Operator() {
       arm.updateMatrixWorld(true);
       rotateInWorld(fore, _q.setFromAxisAngle(_v.set(1, 0, 0), g.pose.foreAngle * k));
       fore.updateMatrixWorld(true);
+
+      // Close the left hand into a grip so no fingertip pokes through the tablet.
+      const grip = k;
+      (["Index", "Middle", "Ring", "Pinky"] as const).forEach((f) => {
+        [0.95, 1.15, 0.8].forEach((ang, j) => {
+          const fb = b[`mixamorigLeftHand${f}${j + 1}`];
+          if (fb) fb.rotateX(-ang * grip);
+        });
+      });
+      [0.3, 0.55].forEach((ang, j) => {
+        const tb = b[`mixamorigLeftHandThumb${j + 2}`];
+        if (tb) tb.rotateX(-ang * grip);
+      });
+      b[B.lHand]?.updateMatrixWorld(true);
     }
 
     // Head tracking: neck and head follow the pointer, in world axes.
