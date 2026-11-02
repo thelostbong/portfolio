@@ -3,13 +3,14 @@
 import { useCallback, useEffect, useMemo, useRef } from "react";
 import gsap from "gsap";
 import Lenis from "lenis";
-import { SECTIONS, useHud, type SectionId } from "@/lib/hud-store";
+import { LOCK_MS, SECTIONS, loop, useHud, type Entry, type SectionId } from "@/lib/hud-store";
 import { SECTION_BLURB, cardsFor, detailFor } from "./cards";
 
 const pad = (n: number) => String(n).padStart(2, "0");
 
 export default function Subscreen() {
   const active = useHud((s) => s.active);
+  const entry = useHud((s) => s.entry);
   const setActive = useHud((s) => s.setActive);
   const rootRef = useRef<HTMLDivElement>(null);
   const railRef = useRef<HTMLDivElement>(null);
@@ -24,6 +25,8 @@ export default function Subscreen() {
 
   const cards = useMemo(() => (active ? cardsFor(active) : []), [active]);
   const section = SECTIONS.find((s) => s.id === active);
+  const nextIdx = SECTIONS.findIndex((s) => s.id === active) + 1;
+  const nextLabel = nextIdx < SECTIONS.length ? SECTIONS[nextIdx].label : "Home";
   const detail = useMemo(() => (active && detailKey ? detailFor(active, detailKey) : null), [active, detailKey]);
 
   const closeDetail = useCallback(() => {
@@ -32,17 +35,35 @@ export default function Subscreen() {
     gsap.to(el, { opacity: 0, y: 14, duration: 0.22, ease: "power2.in", onComplete: () => setDetail(null) });
   }, [setDetail]);
 
-  const close = useCallback(() => {
+  // Fade the screen out, then run `then`. Every section change goes through here.
+  const leave = useCallback((then: () => void) => {
+    loop.lockUntil = performance.now() + LOCK_MS;
     const el = rootRef.current;
-    if (!el) return setActive(null);
-    gsap.to(el, { opacity: 0, duration: 0.35, ease: "power2.in", onComplete: () => setActive(null) });
-  }, [setActive]);
+    if (!el) return then();
+    gsap.to(el, { opacity: 0, duration: 0.3, ease: "power2.in", onComplete: then });
+  }, []);
+
+  const close = useCallback(() => leave(() => setActive(null)), [leave, setActive]);
 
   const go = useCallback(
     (id: SectionId) => {
-      if (id !== useHud.getState().active) setActive(id);
+      if (id !== useHud.getState().active) leave(() => setActive(id, "start"));
     },
-    [setActive],
+    [leave, setActive],
+  );
+
+  // One step around the loop: next/previous section, or back to the landing screen
+  // past either end. Scrolling back into a section lands on its last card.
+  const step = useCallback(
+    (dir: 1 | -1) => {
+      const cur = useHud.getState().active;
+      const i = SECTIONS.findIndex((x) => x.id === cur);
+      const j = i + dir;
+      if (j < 0 || j >= SECTIONS.length) return leave(() => setActive(null));
+      const next: Entry = dir === 1 ? "start" : "end";
+      leave(() => setActive(SECTIONS[j].id, next));
+    },
+    [leave, setActive],
   );
 
   // Rail: Lenis in horizontal mode, per-card depth effect, progress, drag.
@@ -54,11 +75,12 @@ export default function Subscreen() {
 
     // Animations are time-based: never let a slow frame stall them.
     gsap.ticker.lagSmoothing(0);
-    wrapper.scrollLeft = 0; // every section starts at its first card
+    wrapper.scrollLeft = 0; // sections open at the first card, or the last one when scrolling back in
     const still = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     const lenis = new Lenis({
       wrapper,
       content,
+      eventsTarget: window, // the wheel works anywhere on the screen, not only over the rail
       orientation: "horizontal",
       gestureOrientation: "both",
       smoothWheel: !still,
@@ -66,6 +88,19 @@ export default function Subscreen() {
       wheelMultiplier: 1.15,
     });
     lenisRef.current = lenis;
+    if (process.env.NODE_ENV !== "production") (window as unknown as { __lenis?: Lenis }).__lenis = lenis;
+    const maxScroll = () => Math.max(0, wrapper.scrollWidth - wrapper.clientWidth);
+    if (entry === "end") lenis.scrollTo(maxScroll(), { immediate: true, force: true });
+
+    // Hold the new rail still until the section change has settled, so the tail of the
+    // wheel flick that brought us here does not drag it along.
+    let alive = true;
+    let unlock = 0;
+    const wait = loop.lockUntil - performance.now();
+    if (wait > 0) {
+      lenis.stop();
+      unlock = window.setTimeout(() => alive && lenis.start(), wait);
+    }
 
     const slots = Array.from(content.querySelectorAll<HTMLElement>("[data-slot]"));
     const total = slots.length;
@@ -132,12 +167,60 @@ export default function Subscreen() {
     window.addEventListener("pointerup", up);
     wrapper.addEventListener("click", swallowClick, true);
 
+    // Where the rail is right now, judged by where it is heading, not where it is drawn.
+    const edges = () => {
+      const t = lenis.targetScroll;
+      const lim = maxScroll();
+      return { start: t <= 2, end: t >= lim - 2 };
+    };
+
+    // Wheel: scrolling moves the rail. A gesture that begins with the rail already parked
+    // at an end, and keeps pushing past it, hands over to the neighbouring section. A
+    // gesture that begins mid-rail never does, so inertia cannot skip a section.
+    let lastWheel = 0;
+    let pushed = 0;
+    let from = { start: false, end: false };
+    const onWheel = (e: WheelEvent) => {
+      if (useHud.getState().detail) return;
+      const now = performance.now();
+      if (now < loop.lockUntil) return;
+      const d = Math.abs(e.deltaX) > Math.abs(e.deltaY) ? e.deltaX : e.deltaY;
+      if (!d) return;
+      if (now - lastWheel > 180) {
+        pushed = 0;
+        from = edges();
+      }
+      lastWheel = now;
+      const forward = d > 0;
+      if ((forward && from.end) || (!forward && from.start)) {
+        pushed += Math.abs(d);
+        if (pushed >= 80) {
+          pushed = 0;
+          step(forward ? 1 : -1);
+        }
+      } else {
+        pushed = 0;
+      }
+    };
+    window.addEventListener("wheel", onWheel, { passive: true });
+
     const onKey = (e: KeyboardEvent) => {
       if (useHud.getState().detail) return; // the detail panel owns the keyboard while open
+      const locked = performance.now() < loop.lockUntil;
       if (e.key === "Escape") close();
-      else if (e.key === "ArrowRight") lenis.scrollTo(lenis.scroll + 520, { duration: 0.9 });
-      else if (e.key === "ArrowLeft") lenis.scrollTo(lenis.scroll - 520, { duration: 0.9 });
-      else if (/^[1-5]$/.test(e.key)) go(SECTIONS[Number(e.key) - 1].id);
+      else if (e.key === "ArrowRight") {
+        if (edges().end) {
+          if (!locked) step(1);
+        } else lenis.scrollTo(lenis.targetScroll + 520, { duration: 0.9 });
+      } else if (e.key === "ArrowLeft") {
+        if (edges().start) {
+          if (!locked) step(-1);
+        } else lenis.scrollTo(lenis.targetScroll - 520, { duration: 0.9 });
+      } else if (e.key === "ArrowDown" || e.key === "PageDown") {
+        if (!locked) step(1);
+      } else if (e.key === "ArrowUp" || e.key === "PageUp") {
+        if (!locked) step(-1);
+      } else if (/^[1-4]$/.test(e.key) && !locked) go(SECTIONS[Number(e.key) - 1].id);
     };
     window.addEventListener("keydown", onKey);
 
@@ -145,7 +228,7 @@ export default function Subscreen() {
     const ctx = gsap.context(() => {
       gsap.fromTo(root, { opacity: 0 }, { opacity: 1, duration: 0.45, ease: "power2.out" });
       gsap.fromTo(".sub-head", { y: 28, opacity: 0 }, { y: 0, opacity: 1, duration: 0.8, ease: "power3.out", delay: 0.2, stagger: 0.08 });
-      gsap.fromTo(".rail-card", { x: 140, opacity: 0 }, { x: 0, opacity: 1, duration: 1, ease: "power3.out", delay: 0.3, stagger: 0.09 });
+      gsap.fromTo(".rail-card", { y: 34, opacity: 0 }, { y: 0, opacity: 1, duration: 0.9, ease: "power3.out", delay: 0.25, stagger: 0.08 });
     }, root);
 
     return () => {
@@ -156,10 +239,13 @@ export default function Subscreen() {
       window.removeEventListener("pointerup", up);
       wrapper.removeEventListener("click", swallowClick, true);
       window.removeEventListener("keydown", onKey);
+      window.removeEventListener("wheel", onWheel);
+      alive = false;
+      window.clearTimeout(unlock);
       lenis.destroy();
       lenisRef.current = null;
     };
-  }, [active, close, go]);
+  }, [active, entry, close, go, step]);
 
   // Detail panel: pause the rail, move focus in, keep Tab inside, Esc closes the panel only.
   useEffect(() => {
@@ -220,7 +306,6 @@ export default function Subscreen() {
               aria-current={s.id === active}
               className={`hud border px-3.5 py-2 transition-colors ${s.id === active ? "border-cyan bg-cyan text-ink" : "border-cyan/25 text-mist hover:border-cyan/70 hover:text-bone"}`}
             >
-              <span className="mr-2 opacity-60">{s.number}</span>
               {s.label}
             </button>
           ))}
@@ -229,7 +314,6 @@ export default function Subscreen() {
 
       {/* Title block */}
       <div className="absolute left-[31vw] right-[5vw] top-[13vh] flex items-end gap-6">
-        <span className="sub-head numeral-outline font-display text-[clamp(80px,9vw,140px)] font-bold leading-[0.8]">{section.number}</span>
         <div className="pb-1">
           <h2 className="sub-head font-display text-[clamp(44px,5vw,78px)] font-bold uppercase leading-[0.9] tracking-wide">{section.label}</h2>
           <p className="sub-head hud mt-2 text-mist">{SECTION_BLURB[active]}</p>
@@ -288,7 +372,7 @@ export default function Subscreen() {
         <div className="h-px flex-1 bg-cyan/20">
           <div ref={barRef} className="h-px origin-left bg-cyan" style={{ transform: "scaleX(0.02)" }} />
         </div>
-        <span className="hud hidden text-mist md:block">Scroll, drag or use ← →</span>
+        <span className="hud hidden text-mist md:block">Scroll or drag · Next: {nextLabel}</span>
       </div>
     </div>
   );

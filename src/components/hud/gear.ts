@@ -196,8 +196,6 @@ export function buildGear(
         return bones[B.spine2].getWorldPosition(out).add(_p.set(-0.11, 0.0, 0.16));
       case "education":
         return bones[B.rArm].getWorldPosition(out).add(_p.set(-0.01, 0.07, 0.03));
-      case "contact":
-        return bones[B.hips].getWorldPosition(out).add(_p.set(-0.16, 0.22, 0.14));
       case "skills":
       default:
         return tablet.getWorldPosition(out);

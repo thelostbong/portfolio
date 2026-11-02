@@ -1,33 +1,44 @@
 import { create } from "zustand";
 
-export type SectionId = "experience" | "projects" | "skills" | "education" | "contact";
+export type SectionId = "education" | "experience" | "projects" | "skills";
 
-export const SECTIONS: { id: SectionId; label: string; number: string }[] = [
-  { id: "experience", label: "Experience", number: "01" },
-  { id: "projects", label: "Projects", number: "02" },
-  { id: "skills", label: "Skills", number: "03" },
-  { id: "education", label: "Education", number: "04" },
-  { id: "contact", label: "Contact", number: "05" },
+// The order here is the order of the scroll loop: landing, then each section, then back to landing.
+export const SECTIONS: { id: SectionId; label: string }[] = [
+  { id: "education", label: "Education" },
+  { id: "experience", label: "Experience" },
+  { id: "projects", label: "Projects" },
+  { id: "skills", label: "Skills" },
 ];
+
+// Which end of the rail a section opens at: "start" when arriving from the previous
+// section, "end" when scrolling back into it from the next one.
+export type Entry = "start" | "end";
+
+// While a section change is animating, wheel input is ignored so one flick of the
+// wheel (and its inertia) can never skip more than one section.
+export const loop = { lockUntil: 0 };
+export const LOCK_MS = 1300;
 
 type HudState = {
   active: SectionId | null;
+  entry: Entry;
   hover: SectionId | null;
   ready: boolean; // operator model loaded and first frame drawn
   detail: string | null; // key of the card whose detail panel is open
   setDetail: (key: string | null) => void;
-  setActive: (id: SectionId | null) => void;
+  setActive: (id: SectionId | null, entry?: Entry) => void;
   setHover: (id: SectionId | null) => void;
   setReady: (ready: boolean) => void;
 };
 
 export const useHud = create<HudState>((set) => ({
   active: null,
+  entry: "start" as Entry,
   hover: null,
   ready: false,
   detail: null,
   setDetail: (detail) => set({ detail }),
-  setActive: (active) => set({ active, detail: null }),
+  setActive: (active, entry = "start") => set({ active, entry, detail: null }),
   setHover: (hover) => set({ hover }),
   setReady: (ready) => set({ ready }),
 }));
@@ -41,7 +52,6 @@ export const anchors: Record<SectionId, Anchor> = {
   projects: { x: 0, y: 0, visible: false },
   skills: { x: 0, y: 0, visible: false },
   education: { x: 0, y: 0, visible: false },
-  contact: { x: 0, y: 0, visible: false },
 };
 
 // Centre of the helmet, for the scanner ring.

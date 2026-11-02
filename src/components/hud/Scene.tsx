@@ -18,7 +18,6 @@ const VIEWS: Record<"home" | SectionId, View> = {
   projects: { pos: [0.1, 1.66, 2.0], look: [0.6, 1.58, 0] },
   skills: { pos: [0.2, 1.22, 2.1], look: [0.68, 1.2, 0] },
   education: { pos: [0.1, 1.5, 2.1], look: [0.62, 1.46, 0] },
-  contact: { pos: [0.1, 1.2, 2.4], look: [0.74, 1.12, 0] },
 };
 
 function CameraRig() {

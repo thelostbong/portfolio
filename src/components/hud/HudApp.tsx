@@ -3,7 +3,7 @@
 import { useEffect } from "react";
 import dynamic from "next/dynamic";
 import { archive, languages as languageData, projects as projectData, skills as skillData, profile, experience as experienceData, education as educationData } from "@/content";
-import { pointer, useHud } from "@/lib/hud-store";
+import { LOCK_MS, loop, pointer, useHud } from "@/lib/hud-store";
 import Landing from "./Landing";
 import Subscreen from "./Subscreen";
 
@@ -82,6 +82,47 @@ export default function HudApp() {
     };
     window.addEventListener("pointermove", onMove);
     return () => window.removeEventListener("pointermove", onMove);
+  }, []);
+
+  // The landing screen is the first stop of the scroll loop: scrolling down opens the
+  // first section, scrolling up opens the last one at its final card.
+  useEffect(() => {
+    let last = 0;
+    let acc = 0;
+    const onWheel = (e: WheelEvent) => {
+      const st = useHud.getState();
+      if (st.active || !st.ready) return;
+      const now = performance.now();
+      if (now < loop.lockUntil) return;
+      const d = Math.abs(e.deltaX) > Math.abs(e.deltaY) ? e.deltaX : e.deltaY;
+      if (!d) return;
+      if (now - last > 180 || Math.sign(d) !== Math.sign(acc)) acc = 0;
+      last = now;
+      acc += d;
+      if (Math.abs(acc) >= 60) {
+        acc = 0;
+        loop.lockUntil = now + LOCK_MS;
+        if (d > 0) st.setActive("education", "start");
+        else st.setActive("skills", "end");
+      }
+    };
+    const onKey = (e: KeyboardEvent) => {
+      const st = useHud.getState();
+      if (st.active || !st.ready || performance.now() < loop.lockUntil) return;
+      if (e.key === "ArrowDown" || e.key === "PageDown") {
+        loop.lockUntil = performance.now() + LOCK_MS;
+        st.setActive("education", "start");
+      } else if (e.key === "ArrowUp" || e.key === "PageUp") {
+        loop.lockUntil = performance.now() + LOCK_MS;
+        st.setActive("skills", "end");
+      }
+    };
+    window.addEventListener("wheel", onWheel, { passive: true });
+    window.addEventListener("keydown", onKey);
+    return () => {
+      window.removeEventListener("wheel", onWheel);
+      window.removeEventListener("keydown", onKey);
+    };
   }, []);
 
   return (

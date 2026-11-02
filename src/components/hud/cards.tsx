@@ -10,12 +10,11 @@ import { useHud, type SectionId } from "@/lib/hud-store";
 const W = "w-[min(560px,42vw)] min-w-[420px]";
 const WIDE = "w-[min(640px,47vw)] min-w-[480px]";
 
-function Card({ children, tag, index, wide, short }: { children: ReactNode; tag: string; index?: string; wide?: boolean; short?: boolean }) {
+function Card({ children, tag, wide, short }: { children: ReactNode; tag: string; wide?: boolean; short?: boolean }) {
   return (
     <article className={`rail-card panel flex shrink-0 flex-col overflow-hidden px-6 py-5 ${short ? "h-[340px] max-h-full" : "h-full"} ${wide ? WIDE : W}`}>
       <header className="flex h-9 items-center justify-between">
         <span className="hud text-cyan">{tag}</span>
-        {index && <span className="numeral-outline font-display text-4xl font-bold leading-none">{index}</span>}
       </header>
       <div className="mt-3 flex min-h-0 flex-1 flex-col">{children}</div>
     </article>
@@ -73,8 +72,8 @@ const experience = (): ReactNode[] => [
       />
     </div>
   </Card>,
-  ...experienceData.map((r, i) => (
-    <Card key={r.id} tag={`${r.start} to ${r.end} // ${r.duration}`} index={String(i + 1).padStart(2, "0")} wide>
+  ...experienceData.map((r) => (
+    <Card key={r.id} tag={`${r.start} to ${r.end} // ${r.duration}`} wide>
       <h2 className="font-display text-[clamp(20px,1.9vw,27px)] font-bold uppercase leading-[1.04]">{r.title}</h2>
       <p className="hud mt-1 text-mist">
         {r.org} // {r.place}
@@ -94,7 +93,7 @@ const ownRepos = archive.filter((a) => a.kind === "original");
 
 const projects = (): ReactNode[] => [
   ...projectData.map((m) => (
-    <Card key={m.slug} tag="Featured project" index={m.number}>
+    <Card key={m.slug} tag="Featured project">
       <h2 className="font-display text-[clamp(20px,1.9vw,26px)] font-bold uppercase leading-[1.04]">{m.title}</h2>
       <p className="mt-2 line-clamp-2 text-[14.5px] leading-snug text-bone">{m.objective}</p>
       <div className="mt-3 flex flex-wrap gap-1.5">
@@ -111,7 +110,7 @@ const projects = (): ReactNode[] => [
       </div>
     </Card>
   )),
-  <Card key="more" tag="More work" index="+">
+  <Card key="more" tag="More work">
     <h2 className="font-display text-[clamp(22px,2vw,28px)] font-bold uppercase leading-[1.04]">Other repositories</h2>
     <ul className="mt-3 space-y-2">
       {ownRepos.map((a) => (
@@ -129,8 +128,8 @@ const projects = (): ReactNode[] => [
 ];
 
 const skills = (): ReactNode[] =>
-  skillData.map((g, i) => (
-    <Card key={g.group} short tag={`Group ${String(i + 1).padStart(2, "0")}`} index={String(i + 1).padStart(2, "0")}>
+  skillData.map((g) => (
+    <Card key={g.group} short tag="Skill group">
       <h2 className="font-display text-[34px] font-bold uppercase leading-none">{g.group}</h2>
       <ul className="mt-6 flex flex-wrap gap-2">
         {g.items.map((it) => (
@@ -141,8 +140,8 @@ const skills = (): ReactNode[] =>
   ));
 
 const education = (): ReactNode[] => [
-  ...educationData.map((t, i) => (
-    <Card key={t.school} short tag={`${t.start} to ${t.end}`} index={String(i + 1).padStart(2, "0")}>
+  ...educationData.map((t) => (
+    <Card key={t.school} short tag={`${t.start} to ${t.end}`}>
       <h2 className="font-display text-[32px] font-bold uppercase leading-[1.02]">{t.degree}</h2>
       <p className="mt-3 text-[16px] text-bone">{t.school}</p>
       <p className="hud mt-1 text-mist">{t.place}</p>
@@ -150,7 +149,7 @@ const education = (): ReactNode[] => [
       <p className="hud mt-1 text-mist">{t.result.split(":")[0]}</p>
     </Card>
   )),
-  <Card key="lang" short tag="Languages" index="+">
+  <Card key="lang" short tag="Languages">
     <h2 className="font-display text-[34px] font-bold uppercase leading-none">Languages</h2>
     <ul className="mt-6 space-y-4">
       {languageData.map((c) => (
@@ -163,24 +162,6 @@ const education = (): ReactNode[] => [
   </Card>,
 ];
 
-const contact = (): ReactNode[] => {
-  const rows: [string, string, string, string?][] = [
-    ["Email", profile.contact.email, `mailto:${profile.contact.email}`],
-    ["Phone", profile.contact.phone, `tel:${profile.contact.phone.replace(/\s/g, "")}`],
-    ["LinkedIn", "nayeemuddin-mohammed-03", profile.links.linkedin],
-    ["GitHub", "github.com/thelostbong", profile.links.github],
-    ["CV", "Download PDF", profile.links.cv],
-  ];
-  return rows.map(([k, v, href], i) => (
-    <Card key={k} short tag={k} index={String(i + 1).padStart(2, "0")}>
-      <a href={href} target={href.startsWith("http") ? "_blank" : undefined} rel="noreferrer" className="group block">
-        <h2 className="break-words font-display text-[30px] font-bold uppercase leading-[1.05] transition-colors group-hover:text-cyan">{v}</h2>
-        <span className="hud mt-4 inline-block text-cyan">Open →</span>
-      </a>
-    </Card>
-  ));
-};
-
 export function cardsFor(id: SectionId): ReactNode[] {
   switch (id) {
     case "experience":
@@ -191,8 +172,6 @@ export function cardsFor(id: SectionId): ReactNode[] {
       return skills();
     case "education":
       return education();
-    case "contact":
-      return contact();
   }
 }
 
@@ -201,7 +180,6 @@ export const SECTION_BLURB: Record<SectionId, string> = {
   projects: "Computer vision, edge AI, generative pipelines and forecasting.",
   skills: "What I build with, grouped by area.",
   education: "Degrees and languages.",
-  contact: "Fastest way to reach me is email.",
 };
 
 export type Detail = { tag: string; title: string; sub?: string; body: ReactNode };
@@ -272,7 +250,7 @@ export function detailFor(id: SectionId, key: string): Detail | null {
     const m = projectData.find((x) => x.slug === key);
     if (!m) return null;
     return {
-      tag: `Featured project ${m.number}`,
+      tag: "Featured project",
       title: m.title,
       body: (
         <div className="grid gap-10 lg:grid-cols-[1fr_230px]">

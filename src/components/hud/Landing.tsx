@@ -1,18 +1,19 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { profile, projects as projectData, experience as experienceData, skills as skillData, education as educationData } from "@/content";
+import { profile, projects as projectData, skills as skillData } from "@/content";
 import { anchors, headRing, SECTIONS, useHud, type SectionId } from "@/lib/hud-store";
 
 type Callout = { id: SectionId; side: "left" | "right"; top: string; meta: string };
 
 const CALLOUTS: Callout[] = [
-  { id: "education", side: "left", top: "21%", meta: `${educationData.length} degrees` },
-  { id: "experience", side: "left", top: "36%", meta: `${experienceData.length} roles` },
-  { id: "contact", side: "left", top: "51%", meta: "Email, LinkedIn, CV" },
+  { id: "education", side: "left", top: "22%", meta: "M.Eng in Applied AI for Digital Production Management" },
+  { id: "experience", side: "left", top: "40%", meta: "DevOps, IoT, Edge AI, MES" },
   { id: "projects", side: "right", top: "19%", meta: `${projectData.length} featured` },
   { id: "skills", side: "right", top: "44%", meta: `${skillData.length} groups` },
 ];
+
+const TAGLINE = "I ship ML and keep it running.";
 
 const pad = (n: number) => String(n).padStart(2, "0");
 
@@ -87,11 +88,10 @@ function TerrainMap() {
   return <canvas ref={ref} className="h-[150px] w-[240px]" aria-hidden="true" />;
 }
 
-const READOUT = [
-  ["95%", "mAP@50 defect detection"],
-  ["<500ms", "edge inference"],
-  ["99.99%", "IoT platform uptime"],
-  ["10,000+", "edge devices managed"],
+const FOOTER_LINKS = [
+  { label: "Email", value: profile.contact.email, href: `mailto:${profile.contact.email}` },
+  { label: "LinkedIn", value: "nayeemuddin-mohammed-03", href: profile.links.linkedin },
+  { label: "GitHub", value: "thelostbong", href: profile.links.github },
 ] as const;
 
 export default function Landing() {
@@ -168,28 +168,11 @@ export default function Landing() {
         </g>
       </svg>
 
-      {/* Top left: identity */}
-      <div className="absolute left-[7vw] top-[8.5vh] flex items-center gap-3">
-        <div className="grid h-10 w-10 place-items-center border border-cyan/60 font-display text-lg font-bold tracking-wider text-cyan">
-          NM
-        </div>
-        <div className="hud leading-tight text-mist">
-          <p className="text-bone">Portfolio</p>
-          <p>{profile.location} // 2026</p>
-        </div>
-      </div>
-
-      {/* Top right: timer and CV */}
-      <div className="absolute right-[7vw] top-[8.5vh] flex items-center gap-6">
+      {/* Top right: session timer */}
+      <div className="absolute right-[7vw] top-[8.5vh]">
         <p className="hud hidden text-mist md:block">
           Session <span className="text-bone"><Timecode /></span>
         </p>
-        <a
-          href={profile.links.cv}
-          className="hud border border-cyan/60 bg-cyan/10 px-4 py-2 text-cyan transition-colors hover:bg-cyan hover:text-ink"
-        >
-          Download CV
-        </a>
       </div>
 
       {/* Callouts: the navigation */}
@@ -209,10 +192,9 @@ export default function Landing() {
               onPointerLeave={() => setHover(null)}
               onFocus={() => setHover(c.id)}
               onBlur={() => setHover(null)}
-              className={`group absolute z-10 w-[210px] text-left transition-transform duration-300 ${c.side === "left" ? "left-[8vw]" : "right-[8vw] text-right"} ${isHover ? (c.side === "left" ? "translate-x-1" : "-translate-x-1") : ""}`}
+              className={`group absolute z-10 w-[250px] text-left transition-transform duration-300 ${c.side === "left" ? "left-[8vw]" : "right-[8vw] text-right"} ${isHover ? (c.side === "left" ? "translate-x-1" : "-translate-x-1") : ""}`}
               style={{ top: c.top }}
             >
-              <span className="hud block text-cyan-dim">{s.number}</span>
               <span className={`block font-display text-[34px] font-bold uppercase leading-none tracking-wide transition-colors ${isHover ? "text-cyan" : "text-bone"}`}>
                 {s.label}
               </span>
@@ -249,24 +231,42 @@ export default function Landing() {
       {/* Name plate */}
       <div className="pointer-events-none absolute inset-x-0 bottom-[17vh] flex flex-col items-center">
         <h1
-          className="glitch font-display text-[clamp(40px,5vw,84px)] font-bold uppercase leading-[0.92] tracking-[0.02em] text-bone"
+          className="glitch font-display text-[clamp(44px,5.6vw,96px)] font-bold uppercase leading-[0.92] tracking-[0.02em] text-bone"
           data-text={profile.name}
         >
           {profile.name}
         </h1>
-        <p className="mt-3 border border-cyan/50 bg-teal/60 px-6 py-1.5 font-display text-[clamp(16px,1.7vw,26px)] font-semibold uppercase tracking-[0.34em] text-bone backdrop-blur-sm">
-          {profile.title}
+        <p className="mt-3 border border-cyan/50 bg-teal/60 px-6 py-1.5 font-display text-[clamp(15px,1.5vw,23px)] font-medium uppercase tracking-[0.2em] text-bone backdrop-blur-sm">
+          {TAGLINE}
         </p>
       </div>
 
-      {/* Readout bar */}
+      {/* Scroll hint */}
+      <div className="pointer-events-none absolute inset-x-0 bottom-[11vh] flex flex-col items-center gap-1">
+        <span className="hud text-bone">Scroll to explore</span>
+        <span aria-hidden="true" className="block h-3 w-3 rotate-45 border-b border-r border-cyan" style={{ animation: "pulse-dot 2s infinite" }} />
+      </div>
+
+      {/* Contact bar */}
       <div className="absolute inset-x-[7vw] bottom-[4.4vh] flex items-end justify-between border-t border-cyan/30 pt-2">
-        {READOUT.map(([v, l]) => (
-          <div key={l} className="flex items-baseline gap-2">
-            <span className="font-display text-xl font-semibold tracking-wide text-cyan">{v}</span>
-            <span className="hud text-mist">{l}</span>
-          </div>
+        {FOOTER_LINKS.map((l) => (
+          <a
+            key={l.label}
+            href={l.href}
+            target={l.href.startsWith("http") ? "_blank" : undefined}
+            rel="noreferrer"
+            className="group flex items-baseline gap-2"
+          >
+            <span className="hud text-mist">{l.label}</span>
+            <span className="font-display text-lg font-semibold tracking-wide text-cyan transition-colors group-hover:text-bone">{l.value}</span>
+          </a>
         ))}
+        <a
+          href={profile.links.cv}
+          className="hud border border-cyan/60 bg-cyan/10 px-5 py-1.5 text-cyan transition-colors hover:bg-cyan hover:text-ink"
+        >
+          CV
+        </a>
       </div>
     </div>
   );
