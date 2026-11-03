@@ -35,7 +35,7 @@ export type Role = {
   duration: string;
   short: string; // label for the career chart
   headline: string; // one sentence for the summary card; the bullets live in the detail panel
-  bullets: { label: string; text: string }[];
+  bullets: { label: string; text: string; gist: string }[]; // gist: one short sentence for the rail
   stats: Stat[];
 };
 
@@ -54,14 +54,17 @@ export const experience: Role[] = [
     bullets: [
       {
         label: "Edge AI Inspection",
+        gist: "YOLOv12 on Raspberry Pi 5 replaces manual visual checks across 16 product variants.",
         text: "Delivered a YOLOv12 assembly-inspection pipeline on Raspberry Pi 5 spanning 16 product variants, reaching 95% mAP@50, precision, and recall, and replacing manual visual inspection with real-time multi-camera defect detection.",
       },
       {
         label: "Inference Latency",
+        gist: "Inference under 500ms, and under one second from edge to MES per unit.",
         text: "Cut model inference under 500ms, with the full edge-to-MES round trip (detection through the REST API to a recorded result) landing under one second per unit.",
       },
       {
         label: "MES Integration",
+        gist: "A FastAPI layer with offline queuing gives zero-duplicate, audit-ready quality records.",
         text: "Designed the REST API (Python/FastAPI) and offline-queuing layer linking edge inference to Tulip MES, producing zero-duplicate, audit-ready quality records with full edge-to-production traceability.",
       },
     ],
@@ -85,14 +88,17 @@ export const experience: Role[] = [
     bullets: [
       {
         label: "DOE & Predictive Modelling",
+        gist: "CCD-RSM, D-optimal and mixed factorial designs across additive manufacturing and robotics.",
         text: "Designed and ran CCD-RSM, D-optimal, and mixed factorial DOE experiments across additive manufacturing and robotics domains.",
       },
       {
         label: "Automation",
+        gist: "R and Python pipelines combining ANOVA and ML optimization replace manual analysis.",
         text: "Developed R/Python pipelines combining ANOVA and ML-based optimization to replace manual statistical analysis.",
       },
       {
         label: "Curriculum Adoption",
+        gist: "The pipeline now teaches DOE methodology to THD students.",
         text: "That pipeline is now used to teach DOE methodology to THD students.",
       },
     ],
@@ -114,14 +120,17 @@ export const experience: Role[] = [
     bullets: [
       {
         label: "CI/CD Automation",
+        gist: "GitLab, Jenkins and SonarQube pipelines cut deployment from 48 hours to under 30 minutes.",
         text: "Replaced manual deployment steps with GitLab, Jenkins, and SonarQube pipelines for IoT firmware and backend releases, cutting deployment time from 48 hours to under 30 minutes and moving release cadence from bi-weekly to on-demand.",
       },
       {
         label: "Cloud Infrastructure",
+        gist: "Terraform on Amazon EKS runs 50+ microservices across 300+ pods in 4 environments.",
         text: "Provisioned and managed Terraform-based infrastructure on Kubernetes (Amazon EKS), containerizing and running 50+ microservices across 300+ pods with Docker in 4 lifecycle environments, monitored through custom PostgreSQL-backed KPI dashboards in Grafana.",
       },
       {
         label: "Real-Time IoT Pipelines",
+        gist: "AWS IoT Core, Lambda and IoT Analytics sustain 99.99% uptime across 10,000+ devices.",
         text: "Deployed AWS IoT Core, Lambda, and IoT Analytics for an event-driven data architecture over MQTT and HTTP, sustaining 99.99% uptime across 10,000+ active edge devices and 2M+ daily events.",
       },
     ],

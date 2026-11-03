@@ -4,25 +4,33 @@ import { forwardRef, useCallback, useEffect, useImperativeHandle, useMemo, useRe
 import { experience, profile } from "@/content";
 import { useHud } from "@/lib/hud-store";
 
-// The Experience rail. The track scrolls sideways as usual; this layer sits inside it
-// and draws a career line that starts beside the profile and runs along the rail from
-// the newest role to the oldest. The line is cumulative months of work counted back from
-// today, so it climbs as you go further back. The tip stays at one spot on screen while
-// the track moves under it, and each role's text hangs from the point it is on, building
-// up as it arrives and clearing as the rail moves on.
-// The rail calls set(p) every frame, p being the rail position in cards (0 = profile).
+// The Experience rail. The track scrolls sideways as usual; this layer sits inside it and
+// draws one career line that runs through the middle of every role's slot. A slot is a
+// box: the left edge is the date the role ended, the right edge the date it started. The
+// line enters on the left, climbs a little as months of work add up, leaves on the right,
+// runs flat for a short stretch and enters the next role. The title sits above the line,
+// the responsibilities and numbers below it, so text never crosses the line.
+// The rail calls set(p) every frame, p being the rail position in slots (0 = profile).
 
 export type ExpTimelineHandle = { set: (p: number) => void };
 
 const clamp = (v: number, a = 0, b = 1) => Math.min(b, Math.max(a, v));
-const ANCHOR = 0.58; // where the tip sits across the visible card, as a share of its width
-const END_AT = 0.14; // where a role's newest point sits inside its own card
+const PAD = 36; // inset of the end and start points inside a slot
+const NOW_GAP = 10; // how far past the profile card the line starts
 
 type Pt = { x: number; y: number; v: number };
 const MON = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 const monthIdx = (s: string) => {
   const [m, y] = s.split(" ");
   return Number(y) * 12 + MON.indexOf(m);
+};
+
+// Up to ten months stay as months; beyond that, years and the months left over.
+const span = (m: number) => {
+  if (m <= 10) return `${m} month${m === 1 ? "" : "s"}`;
+  const y = Math.floor(m / 12);
+  const r = m % 12;
+  return `${y} yr${y === 1 ? "" : "s"}${r ? ` ${r} mo` : ""}`;
 };
 
 const ExpTimeline = forwardRef<ExpTimelineHandle>(function ExpTimeline(_, ref) {
@@ -51,32 +59,37 @@ const ExpTimeline = forwardRef<ExpTimelineHandle>(function ExpTimeline(_, ref) {
     const total = dur.reduce((a, b) => a + b, 0);
 
     const short = h < 420;
-    const YT = short ? 22 : 24;
-    const YB = YT + (short ? h * 0.17 : Math.min(112, h * 0.22));
-    const Y = (v: number) => YB - (v / total) * (YB - YT);
-    const blockTop = YB + (short ? 36 : 42);
+    const climb = short ? 44 : 70; // the whole career climbs this far, whatever the month count
+    const s = climb / total;
+    const topNeed = short ? 74 : 108; // room for dates, title and place above the line
+    const yBase = topNeed + (short ? 28 : 34) + climb;
+    const Y = (v: number) => yBase - v * s;
 
-    const pts: Pt[] = [{ x: card * ANCHOR, v: 0, y: Y(0) }];
+    // Points along the line, newest first: today, then for each role its end and start.
+    const nowX = card - 44 + NOW_GAP;
+    const pts: Pt[] = [{ x: nowX, v: 0, y: Y(0) }];
+    const ends: Pt[] = [];
+    const starts: Pt[] = [];
     let cum = 0;
     roles.forEach((_, i) => {
-      const base = (i + 1) * step;
-      pts.push({ x: base + card * END_AT, v: cum, y: Y(cum) });
+      const left = (i + 1) * step;
+      const e = { x: left + PAD, v: cum, y: Y(cum) };
       cum += dur[i];
-      pts.push({ x: base + card * ANCHOR, v: cum, y: Y(cum) });
+      const st = { x: left + card - PAD, v: cum, y: Y(cum) };
+      ends.push(e);
+      starts.push(st);
+      pts.push(e, st);
     });
     const cumLen: number[] = [0];
     for (let i = 1; i < pts.length; i++) cumLen.push(cumLen[i - 1] + Math.hypot(pts[i].x - pts[i - 1].x, pts[i].y - pts[i - 1].y));
     const L = cumLen[cumLen.length - 1];
     const line = pts.map((q, i) => `${i ? "L" : "M"}${q.x.toFixed(1)},${q.y.toFixed(1)}`).join(" ");
-    const area = `${line} L${pts[pts.length - 1].x.toFixed(1)},${YB} L${pts[0].x.toFixed(1)},${YB} Z`;
 
-    // Dates under the points: today at the start, then each role's end and start.
-    const labels = pts.map((q, i) => ({ x: q.x, text: i === 0 ? "Now" : i % 2 ? roles[(i - 1) / 2].end : roles[(i - 2) / 2].start }));
-    const grid = [0, 12, 24].filter((v) => v < total).map((v) => ({ v, y: Y(v) }));
-
-    const anchors = [pts[0], ...roles.map((_, i) => pts[2 * i + 2])];
-    const bw = Math.min(520, card * ANCHOR - 24);
-    return { pts, cumLen, L, line, area, labels, grid, YT, YB, blockTop, anchors, bw, total, card, step, w, h, short };
+    // Where the tip rests when each slot is in focus: beside the profile, then each start point.
+    const stops = [nowX, ...starts.map((q) => q.x)];
+    const below = short ? 38 : 46; // from the end point down to the lower block
+    const above = short ? 30 : 36; // from the start point up to the upper block
+    return { pts, ends, starts, cumLen, L, line, yBase, stops, total, card, step, w, h, short, below, above, nowX, span: dur.map((_, i) => span(starts[i].v)) };
   }, [dim]);
 
   const modelRef = useRef(model);
@@ -84,54 +97,53 @@ const ExpTimeline = forwardRef<ExpTimelineHandle>(function ExpTimeline(_, ref) {
   const pRef = useRef(0);
 
   const lineRef = useRef<SVGPathElement>(null);
-  const clipRef = useRef<SVGRectElement>(null);
   const tipRef = useRef<SVGGElement>(null);
-  const tipText = useRef<SVGTextElement>(null);
-  const guide = useRef<SVGLineElement>(null);
   const dots = useRef<(SVGGElement | null)[]>([]);
-  const poles = useRef<(SVGLineElement | null)[]>([]);
+  const counts = useRef<(SVGTextElement | null)[]>([]);
   const blocks = useRef<(HTMLDivElement | null)[]>([]);
 
   const apply = useCallback((p: number) => {
     const m = modelRef.current;
     if (!m) return;
-    const { pts, cumLen, L, YB, step, card } = m;
-    const pc = clamp(p, 0, m.anchors.length - 1);
-    const xt = pc * step + card * ANCHOR; // the line is drawn this far
+    const { pts, cumLen, L, stops } = m;
+    const pc = clamp(p, 0, stops.length - 1);
+    const k0 = Math.floor(pc);
+    const k1 = Math.min(stops.length - 1, k0 + 1);
+    const xt = stops[k0] + (stops[k1] - stops[k0]) * (pc - k0); // the line is drawn this far
+
     let i = 0;
     while (i < pts.length - 2 && xt > pts[i + 1].x) i++;
-    const t = clamp((xt - pts[i].x) / (pts[i + 1].x - pts[i].x));
+    const t = clamp((xt - pts[i].x) / Math.max(1, pts[i + 1].x - pts[i].x));
     const y = pts[i].y + (pts[i + 1].y - pts[i].y) * t;
-    const v = pts[i].v + (pts[i + 1].v - pts[i].v) * t;
     const drawn = cumLen[i] + (cumLen[i + 1] - cumLen[i]) * t;
 
     lineRef.current?.setAttribute("stroke-dashoffset", String(L - drawn));
-    clipRef.current?.setAttribute("width", xt.toFixed(1));
     if (tipRef.current) tipRef.current.setAttribute("transform", `translate(${xt.toFixed(1)} ${y.toFixed(1)})`);
-    if (tipText.current) tipText.current.textContent = `${Math.round(v)} mo`;
-    if (guide.current) {
-      guide.current.setAttribute("x1", xt.toFixed(1));
-      guide.current.setAttribute("x2", xt.toFixed(1));
-      guide.current.setAttribute("y1", y.toFixed(1));
-      guide.current.setAttribute("y2", String(YB));
-    }
     dots.current.forEach((d, k) => {
       if (d) d.style.opacity = String(clamp((xt - pts[k].x) / 8 + 1));
+    });
+    counts.current.forEach((c, k) => {
+      if (c) c.style.opacity = String(clamp((xt - m.starts[k].x) / 14 + 1));
     });
 
     blocks.current.forEach((el, k) => {
       if (!el) return;
-      const a = clamp(1 - Math.abs(p - k) * 1.8);
-      el.style.visibility = a > 0.02 ? "visible" : "hidden";
-      if (k === 0) el.style.opacity = a.toFixed(3);
-      else el.style.borderColor = `rgb(56 200 216 / ${(0.55 * a).toFixed(3)})`;
+      const d = k - p; // < 0 once passed, > 0 while it is still ahead
+      // The role just passed fades out quickly; the next one waits at the edge, blurred.
+      const a = d <= 0 ? clamp(1 - Math.abs(d) * 2.4) : 1 - Math.min(d, 1) * 0.45;
+      const blur = Math.min(1, Math.abs(d) * 3) * 6;
+      const r = clamp(1 - Math.abs(d) * 1.8);
+      el.style.visibility = a > 0.02 && Math.abs(d) < 1.4 ? "visible" : "hidden";
+      el.style.opacity = a.toFixed(3);
+      el.style.filter = blur > 0.05 ? `blur(${blur.toFixed(2)}px)` : "";
+      (el as HTMLElement & { inert: boolean }).inert = Math.abs(d) > 0.35;
       el.querySelectorAll<HTMLElement>("[data-i]").forEach((c) => {
-        const o = clamp(a * 2.1 - Number(c.dataset.i) * 0.2);
+        const i = Number(c.dataset.i);
+        let o = clamp(r * 2.1 - i * 0.2);
+        if (d > 0) o = Math.max(0.6, o);
         c.style.opacity = o.toFixed(3);
         c.style.transform = `translateY(${((1 - o) * 14).toFixed(1)}px)`;
       });
-      const pole = poles.current[k];
-      if (pole) pole.style.opacity = a.toFixed(3);
     });
   }, []);
 
@@ -153,28 +165,8 @@ const ExpTimeline = forwardRef<ExpTimelineHandle>(function ExpTimeline(_, ref) {
       {model && (
         <>
           <svg width={model.w} height={model.h} className="absolute inset-0" role="img" aria-label={`Career line, ${model.total} months of work, newest role first`}>
-            <defs>
-              <linearGradient id="exp-fill" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0" stopColor="var(--color-cyan)" stopOpacity="0.3" />
-                <stop offset="1" stopColor="var(--color-cyan)" stopOpacity="0" />
-              </linearGradient>
-              <clipPath id="exp-clip">
-                <rect ref={clipRef} x="0" y="0" width="0" height={model.h} />
-              </clipPath>
-            </defs>
-
-            <line x1="0" x2={model.w} y1={model.YB} y2={model.YB} stroke="rgb(143 179 184 / 0.35)" />
-            {model.grid.filter((g) => g.v).map((g) => (
-              <line key={g.v} x1="0" x2={model.w} y1={g.y} y2={g.y} stroke="rgb(143 179 184 / 0.14)" strokeDasharray="2 5" />
-            ))}
-            {model.labels.map((l, k) => (
-              <g key={k}>
-                <line x1={l.x} x2={l.x} y1={model.YB} y2={model.YB + 5} stroke="rgb(143 179 184 / 0.55)" />
-                <text x={l.x} y={model.YB + 18} textAnchor="middle" className="exp-t">{l.text}</text>
-              </g>
-            ))}
-
-            <path d={model.area} fill="url(#exp-fill)" clipPath="url(#exp-clip)" />
+            <line x1="0" x2={model.w} y1={model.yBase} y2={model.yBase} stroke="rgb(143 179 184 / 0.16)" strokeDasharray="2 6" />
+            <path d={model.line} fill="none" stroke="rgb(56 200 216 / 0.16)" strokeWidth="2" strokeLinejoin="round" />
             <path
               ref={lineRef}
               d={model.line}
@@ -187,81 +179,104 @@ const ExpTimeline = forwardRef<ExpTimelineHandle>(function ExpTimeline(_, ref) {
               strokeDashoffset={model.L}
               style={{ filter: "drop-shadow(0 0 5px rgb(56 200 216 / .6))" }}
             />
-            {model.pts.map((q, k) => (
-              <g key={k} ref={(el) => void (dots.current[k] = el)} style={{ opacity: 0 }}>
-                <circle cx={q.x} cy={q.y} r="3.2" fill="var(--color-ink)" stroke="var(--color-bone)" strokeWidth="1.4" />
-              </g>
+
+            {model.pts.map((q, k) => {
+              const role = k ? experience[Math.floor((k - 1) / 2)] : null;
+              const isEnd = k % 2 === 1;
+              const text = k === 0 ? "Now" : isEnd ? role!.end : role!.start;
+              return (
+                <g key={k} ref={(el) => void (dots.current[k] = el)} style={{ opacity: 0 }}>
+                  <circle cx={q.x} cy={q.y} r="3.4" fill="var(--color-ink)" stroke="var(--color-bone)" strokeWidth="1.4" />
+                  <text x={q.x} y={q.y + 20} textAnchor="middle" className="exp-t">{text}</text>
+                </g>
+              );
+            })}
+
+            {model.starts.map((q, k) => (
+              <text key={k} ref={(el) => void (counts.current[k] = el)} x={q.x} y={q.y - 14} textAnchor="end" className="exp-t exp-tip" style={{ opacity: 0 }}>
+                {model.span[k]}
+              </text>
             ))}
 
-            {model.anchors.map((a, k) => (
-              <line key={k} ref={(el) => void (poles.current[k] = el)} x1={a.x} x2={a.x} y1={a.y + 6} y2={model.blockTop} stroke="rgb(56 200 216 / 0.55)" strokeDasharray="2 3" style={{ opacity: 0 }} />
-            ))}
-            <line ref={guide} x1="0" x2="0" y1={model.YT} y2={model.YB} stroke="rgb(56 200 216 / 0.4)" strokeDasharray="2 3" />
             <g ref={tipRef}>
               <circle r="9" fill="rgb(56 200 216 / 0.18)" className="exp-pulse" />
               <circle r="4.5" fill="var(--color-cyan)" />
-              <text ref={tipText} x="-12" y="-10" textAnchor="end" className="exp-t exp-tip">0 mo</text>
             </g>
           </svg>
 
           {/* Profile: the legend the rail opens on, with the line starting beside it */}
-          <div ref={(el) => void (blocks.current[0] = el)} className="absolute left-0 top-0" style={{ width: model.card * 0.5, height: model.h, visibility: "hidden" }}>
-            <div className="panel flex h-full flex-col px-6 py-5">
-              <span data-i="0" className="hud text-cyan">Profile</span>
-              <h2 data-i="1" className="mt-3 font-display text-[clamp(24px,2.3vw,34px)] font-bold uppercase leading-[1.04] [@media(max-height:700px)]:text-[22px]">{profile.title}</h2>
-              <p data-i="2" className="mt-3 text-[clamp(13px,1.05vw,15.5px)] leading-relaxed text-bone/90 [@media(max-height:700px)]:text-[12.5px] [@media(max-height:700px)]:leading-snug">{profile.summary}</p>
-              <div data-i="3" className="mt-auto flex flex-wrap gap-1.5 pt-3">
-                {["AWS", "Kubernetes", "Terraform", "YOLO", "FastAPI", "MLflow"].map((c) => (
-                  <span key={c} className="chip">{c}</span>
-                ))}
+          <div ref={(el) => void (blocks.current[0] = el)} className="absolute left-0 top-0" style={{ width: model.card - 44, height: model.h, visibility: "hidden" }}>
+            <div className="panel grid h-full grid-cols-[1.55fr_1fr] gap-10 px-8 py-6">
+              <div className="flex min-w-0 flex-col">
+                <span data-i="0" className="hud text-cyan">Profile</span>
+                <h2 data-i="1" className={`mt-3 font-display font-bold uppercase leading-[1.04] ${model.short ? "text-[24px]" : "text-[clamp(28px,2.6vw,40px)]"}`}>{profile.title}</h2>
+                <p data-i="2" className={`mt-3 text-bone/90 ${model.short ? "text-[13px] leading-snug" : "text-[clamp(14px,1.1vw,16px)] leading-relaxed"}`}>{profile.summary}</p>
+                <div data-i="3" className="mt-auto flex flex-wrap gap-1.5 pt-3">
+                  {["AWS", "Kubernetes", "Terraform", "YOLO", "FastAPI", "MLflow"].map((c) => (
+                    <span key={c} className="chip">{c}</span>
+                  ))}
+                </div>
               </div>
-              <dl data-i="4" className="mt-3 grid grid-cols-3 gap-x-4 border-t border-cyan/20 pt-3">
+              <dl data-i="4" className="flex min-w-0 flex-col justify-center gap-5 border-l border-cyan/20 pl-8">
                 {[
                   ["2 yrs", "production DevOps and cloud"],
                   ["2", "research assistant roles"],
                   ["1.8", "M.Eng grade"],
                 ].map(([v, l]) => (
                   <div key={l}>
-                    <dd className="font-display text-[clamp(20px,1.8vw,26px)] font-semibold leading-none text-cyan">{v}</dd>
-                    <dt className="hud mt-1 text-[9px] leading-snug text-mist">{l}</dt>
+                    <dd className="font-display text-[clamp(26px,2.4vw,36px)] font-semibold leading-none text-cyan">{v}</dd>
+                    <dt className="hud mt-1.5 text-[10px] leading-snug text-mist">{l}</dt>
                   </div>
                 ))}
               </dl>
             </div>
           </div>
 
-          {/* Roles: each hangs from its start point on the line */}
+          {/* Roles: title above the line, responsibilities and numbers below it */}
           {experience.map((role, i) => {
             const k = i + 1;
-            const a = model.anchors[k];
+            const e = model.ends[i];
+            const st = model.starts[i];
+            const left = k * model.step + PAD;
+            const width = model.card - PAD * 2;
+            const cols = role.stats.length;
             return (
-              <div
-                key={role.id}
-                ref={(el) => void (blocks.current[k] = el)}
-                className="absolute border-r-2 pr-5 text-right"
-                style={{ left: a.x - model.bw, top: model.blockTop, width: model.bw, visibility: "hidden", borderColor: "transparent" }}
-              >
-                <div data-i="0" className="flex items-center justify-end gap-5">
-                  <p className="hud text-cyan">
-                    {role.start} to {role.end} // {role.duration}
+              <div key={role.id} ref={(el) => void (blocks.current[k] = el)} className="absolute left-0 top-0" style={{ width: model.w, height: model.h, visibility: "hidden" }}>
+                <div className="absolute text-left" style={{ left, width, bottom: model.h - (st.y - model.above) }}>
+                  <div data-i="0" className="flex items-center justify-between gap-6">
+                    <p className="hud text-cyan">
+                      {role.start} to {role.end} // {role.duration}
+                    </p>
+                    <button type="button" onClick={() => openDetail(role.id)} className="ghost-btn plus pointer-events-auto shrink-0" aria-haspopup="dialog">
+                      Full details <span className="sign" aria-hidden="true">+</span>
+                    </button>
+                  </div>
+                  <h2 data-i="1" className={`mt-2 font-display font-bold uppercase leading-[1.04] ${model.short ? "text-[21px]" : "text-[clamp(22px,2vw,28px)]"}`}>{role.title}</h2>
+                  <p data-i="2" className="hud mt-1.5 text-mist">
+                    {role.org} // {role.place}
                   </p>
-                  <button type="button" onClick={() => openDetail(role.id)} className="ghost-btn plus pointer-events-auto" aria-haspopup="dialog">
-                    Full details <span className="sign" aria-hidden="true">+</span>
-                  </button>
                 </div>
-                <h2 data-i="1" className="mt-2 font-display text-[clamp(21px,1.9vw,27px)] font-bold uppercase leading-[1.04]">{role.title}</h2>
-                <p data-i="2" className="hud mt-1.5 text-mist">
-                  {role.org} // {role.place}
-                </p>
-                <p data-i="3" className="mt-3 line-clamp-2 text-[clamp(14px,1.05vw,15.5px)] leading-snug text-bone/90 [@media(max-height:700px)]:hidden">{role.headline}</p>
-                <dl data-i="4" className="mt-3 grid gap-x-5 gap-y-2.5 [@media(max-height:700px)]:mt-3" style={{ gridTemplateColumns: `repeat(${role.stats.length > 4 ? 3 : role.stats.length}, minmax(0, 1fr))` }}>
-                  {role.stats.map((s) => (
-                    <div key={s.label}>
-                      <dd className="font-display text-[clamp(22px,2vw,30px)] font-semibold leading-none text-cyan [@media(max-height:700px)]:text-[20px]">{s.value}</dd>
-                      <dt className="hud mt-1 text-[10px] leading-snug text-mist">{s.label}</dt>
-                    </div>
-                  ))}
-                </dl>
+
+                <div className="absolute text-left" style={{ left, width, top: e.y + model.below }}>
+                  <div data-i="3" className="grid grid-cols-3 gap-x-6">
+                    {role.bullets.map((b) => (
+                      <div key={b.label}>
+                        <p className="hud text-cyan">{b.label}</p>
+                        {!model.short && <p className="mt-1.5 text-[clamp(13px,1vw,14.5px)] leading-snug text-bone/80">{b.gist}</p>}
+                      </div>
+                    ))}
+                  </div>
+                  <div data-i="4" className={`border-t border-cyan/20 ${model.short ? "mt-3 pt-2.5" : "mt-5 pt-4"}`}>
+                    <dl className="grid gap-x-4" style={{ width: `min(100%, ${cols * 200}px)`, gridTemplateColumns: `repeat(${cols}, minmax(0, 1fr))` }}>
+                      {role.stats.map((s) => (
+                        <div key={s.label}>
+                          <dd className={`whitespace-nowrap font-display font-semibold leading-none text-cyan ${model.short ? "text-[20px]" : "text-[clamp(22px,1.9vw,28px)]"}`}>{s.value}</dd>
+                          <dt className="hud mt-1.5 text-[10px] leading-snug text-mist">{s.label}</dt>
+                        </div>
+                      ))}
+                    </dl>
+                  </div>
+                </div>
               </div>
             );
           })}
