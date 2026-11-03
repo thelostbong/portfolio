@@ -91,7 +91,7 @@ const projects = (): ReactNode[] => [
       </div>
       <div className="mt-2 flex flex-wrap items-center gap-6">
         <DetailsButton k={m.slug} />
-        {m.repo ? <Link href={`${profile.links.github}/${m.repo}`}>Repository</Link> : <span className="hud text-mist">Team project // no public repo</span>}
+        {m.repo ? <Link href={`${profile.links.github}/${m.repo}`}>Repository</Link> : m.repoUrl ? <Link href={m.repoUrl}>Team project repository</Link> : null}
       </div>
     </article>
   )),
@@ -112,17 +112,22 @@ const projects = (): ReactNode[] => [
   </article>,
 ];
 
-const skills = (): ReactNode[] =>
-  skillData.map((g) => (
-    <Card key={g.group} short tag="Skill group">
-      <h2 className="font-display text-[34px] font-bold uppercase leading-none">{g.group}</h2>
-      <ul className="mt-6 flex flex-wrap gap-2">
-        {g.items.map((it) => (
-          <li key={it} className="chip text-[12px]">{it}</li>
-        ))}
-      </ul>
-    </Card>
-  ));
+// One panel, four columns. Core tools are large so they read first; the rest sit small below.
+const skills = (): ReactNode[] => [
+  <article key="skills" className="project-card rail-card panel flex h-full max-h-[460px] shrink-0 flex-col justify-center overflow-hidden px-8 py-6">
+    <div className="grid grid-cols-2 gap-x-12 gap-y-8">
+      {skillData.map((g) => (
+        <section key={g.group} className="border-l-2 border-cyan/50 pl-5">
+          <h2 className="hud text-cyan">{g.group}</h2>
+          <p className="mt-2.5 font-display text-[clamp(22px,1.9vw,28px)] font-semibold uppercase leading-[1.18] text-bone">
+            {g.core.join(" / ")}
+          </p>
+          <p className="mt-2 text-[clamp(12.5px,0.95vw,14px)] leading-relaxed text-mist">{g.also.join(" · ")}</p>
+        </section>
+      ))}
+    </div>
+  </article>,
+];
 
 const education = (): ReactNode[] => [
   ...educationData.map((t) => (
@@ -175,8 +180,8 @@ export function cardsFor(id: SectionId): ReactNode[] {
 
 export const SECTION_BLURB: Record<SectionId, string> = {
   experience: "Industry and research roles, newest first.",
-  projects: "Computer vision, edge AI, generative pipelines and forecasting.",
-  skills: "What I build with, grouped by area.",
+  projects: "Defect detection, edge AI, multimodal ML pipelines.",
+  skills: "MLOps, Kubernetes, AWS, computer vision.",
   education: "Degrees and languages.",
 };
 
@@ -262,7 +267,7 @@ export function detailFor(id: SectionId, key: string): Detail | null {
               ))}
             </div>
             <div className="mt-6">
-              {m.repo ? <Link href={`${profile.links.github}/${m.repo}`}>View repository</Link> : <span className="hud text-mist">Team project // no public repository</span>}
+              {m.repo ? <Link href={`${profile.links.github}/${m.repo}`}>View repository</Link> : m.repoUrl ? <Link href={m.repoUrl}>View team project repository</Link> : null}
             </div>
           </div>
           <Metrics stats={m.stats} />

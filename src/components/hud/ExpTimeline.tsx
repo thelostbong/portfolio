@@ -239,8 +239,7 @@ const ExpTimeline = forwardRef<ExpTimelineHandle>(function ExpTimeline(_, ref) {
             const st = model.starts[i];
             const left = k * model.step + PAD;
             const width = model.card - PAD * 2;
-            const cols = role.stats.length;
-            return (
+                        return (
               <div key={role.id} ref={(el) => void (blocks.current[k] = el)} className="absolute left-0 top-0" style={{ width: model.w, height: model.h, visibility: "hidden" }}>
                 <div className="absolute text-left" style={{ left, width, bottom: model.h - (st.y - model.above) }}>
                   <div data-i="0" className="flex items-center justify-between gap-6">
@@ -257,25 +256,15 @@ const ExpTimeline = forwardRef<ExpTimelineHandle>(function ExpTimeline(_, ref) {
                   </p>
                 </div>
 
-                <div className="absolute text-left" style={{ left, width, top: e.y + model.below }}>
-                  <div data-i="3" className="grid grid-cols-3 gap-x-6">
-                    {role.bullets.map((b) => (
-                      <div key={b.label}>
-                        <p className="hud text-cyan">{b.label}</p>
-                        {!model.short && <p className="mt-1.5 text-[clamp(13px,1vw,14.5px)] leading-snug text-bone/80">{b.gist}</p>}
-                      </div>
-                    ))}
-                  </div>
-                  <div data-i="4" className={`border-t border-cyan/20 ${model.short ? "mt-3 pt-2.5" : "mt-5 pt-4"}`}>
-                    <dl className="grid gap-x-4" style={{ width: `min(100%, ${cols * 200}px)`, gridTemplateColumns: `repeat(${cols}, minmax(0, 1fr))` }}>
-                      {role.stats.map((s) => (
-                        <div key={s.label}>
-                          <dd className={`whitespace-nowrap font-display font-semibold leading-none text-cyan ${model.short ? "text-[20px]" : "text-[clamp(22px,1.9vw,28px)]"}`}>{s.value}</dd>
-                          <dt className="hud mt-1.5 text-[10px] leading-snug text-mist">{s.label}</dt>
-                        </div>
-                      ))}
-                    </dl>
-                  </div>
+                {/* Three takeaways: the number first, then one sentence on what was done */}
+                <div className="absolute grid grid-cols-3 gap-x-6 text-left" style={{ left, width, top: e.y + model.below }}>
+                  {role.proof.map((pf, n) => (
+                    <div key={pf.hero} data-i={3 + n} className="border-t-2 border-cyan/60 pt-3">
+                      <p className={`whitespace-nowrap font-display font-semibold leading-none text-cyan ${model.short ? "text-[22px]" : "text-[clamp(26px,2.2vw,34px)]"}`}>{pf.hero}</p>
+                      <p className="hud mt-1.5 text-[10px] text-mist">{pf.cap}</p>
+                      <p className={`mt-2.5 text-bone/90 ${model.short ? "text-[12.5px] leading-snug" : "text-[clamp(13.5px,1vw,15px)] leading-[1.4]"}`}>{pf.line}</p>
+                    </div>
+                  ))}
                 </div>
               </div>
             );

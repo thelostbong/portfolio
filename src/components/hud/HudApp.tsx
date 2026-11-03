@@ -3,7 +3,7 @@
 import { useEffect } from "react";
 import dynamic from "next/dynamic";
 import { archive, languages as languageData, projects as projectData, skills as skillData, profile, experience as experienceData, education as educationData } from "@/content";
-import { LOCK_MS, loop, pointer, useHud } from "@/lib/hud-store";
+import { LOCK_MS, SECTIONS, loop, pointer, useHud } from "@/lib/hud-store";
 import Landing from "./Landing";
 import Subscreen from "./Subscreen";
 
@@ -44,7 +44,7 @@ function PlainContent() {
       <ul>
         {skillData.map((g) => (
           <li key={g.group}>
-            {g.group}: {g.items.join(", ")}
+            {g.group}: {[...g.core, ...g.also].join(", ")}
           </li>
         ))}
       </ul>
@@ -102,8 +102,8 @@ export default function HudApp() {
       if (Math.abs(acc) >= 60) {
         acc = 0;
         loop.lockUntil = now + LOCK_MS;
-        if (d > 0) st.setActive("education", "start");
-        else st.setActive("skills", "end");
+        if (d > 0) st.setActive(SECTIONS[0].id, "start");
+        else st.setActive(SECTIONS[SECTIONS.length - 1].id, "end");
       }
     };
     const onKey = (e: KeyboardEvent) => {
@@ -111,10 +111,10 @@ export default function HudApp() {
       if (st.active || !st.ready || performance.now() < loop.lockUntil) return;
       if (e.key === "ArrowDown" || e.key === "PageDown") {
         loop.lockUntil = performance.now() + LOCK_MS;
-        st.setActive("education", "start");
+        st.setActive(SECTIONS[0].id, "start");
       } else if (e.key === "ArrowUp" || e.key === "PageUp") {
         loop.lockUntil = performance.now() + LOCK_MS;
-        st.setActive("skills", "end");
+        st.setActive(SECTIONS[SECTIONS.length - 1].id, "end");
       }
     };
     window.addEventListener("wheel", onWheel, { passive: true });

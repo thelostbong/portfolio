@@ -1,16 +1,17 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { profile, projects as projectData, skills as skillData } from "@/content";
+import { profile } from "@/content";
 import { anchors, headRing, SECTIONS, useHud, type SectionId } from "@/lib/hud-store";
 
 type Callout = { id: SectionId; side: "left" | "right"; top: string; meta: string };
 
+// Left column reads top to bottom, then the right column: the same order as the scroll loop.
 const CALLOUTS: Callout[] = [
-  { id: "education", side: "left", top: "22%", meta: "M.Eng in Applied AI for Digital Production Management" },
+  { id: "projects", side: "left", top: "22%", meta: "Defect detection, edge AI, multimodal ML pipelines" },
   { id: "experience", side: "left", top: "40%", meta: "DevOps, Computer Vision, Machine Learning" },
-  { id: "projects", side: "right", top: "19%", meta: `${projectData.length} featured` },
-  { id: "skills", side: "right", top: "44%", meta: `${skillData.length} groups` },
+  { id: "education", side: "right", top: "19%", meta: "M.Eng in Applied AI for Digital Production Management" },
+  { id: "skills", side: "right", top: "44%", meta: "MLOps, Kubernetes, AWS, computer vision" },
 ];
 
 const TAGLINE = "I ship ML and keep it running.";

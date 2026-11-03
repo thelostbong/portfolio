@@ -35,7 +35,8 @@ export type Role = {
   duration: string;
   short: string; // label for the career chart
   headline: string; // one sentence for the summary card; the bullets live in the detail panel
-  bullets: { label: string; text: string; gist: string }[]; // gist: one short sentence for the rail
+  bullets: { label: string; text: string }[]; // full wording, shown in the detail panel
+  proof: { hero: string; cap: string; line: string }[]; // the three takeaways on the rail: a number, what it measures, what was done
   stats: Stat[];
 };
 
@@ -54,19 +55,21 @@ export const experience: Role[] = [
     bullets: [
       {
         label: "Edge AI Inspection",
-        gist: "YOLOv12 on Raspberry Pi 5 replaces manual visual checks across 16 product variants.",
         text: "Delivered a YOLOv12 assembly-inspection pipeline on Raspberry Pi 5 spanning 16 product variants, reaching 95% mAP@50, precision, and recall, and replacing manual visual inspection with real-time multi-camera defect detection.",
       },
       {
         label: "Inference Latency",
-        gist: "Inference under 500ms, and under one second from edge to MES per unit.",
         text: "Cut model inference under 500ms, with the full edge-to-MES round trip (detection through the REST API to a recorded result) landing under one second per unit.",
       },
       {
         label: "MES Integration",
-        gist: "A FastAPI layer with offline queuing gives zero-duplicate, audit-ready quality records.",
         text: "Designed the REST API (Python/FastAPI) and offline-queuing layer linking edge inference to Tulip MES, producing zero-duplicate, audit-ready quality records with full edge-to-production traceability.",
       },
+    ],
+    proof: [
+      { hero: "95%", cap: "mAP@50", line: "YOLOv12 on Raspberry Pi 5 replaced manual visual checks across 16 product variants." },
+      { hero: "<500ms", cap: "inference", line: "Each unit's result reaches Tulip MES in under a second, over a REST API." },
+      { hero: "0", cap: "duplicate records", line: "A FastAPI layer with offline queuing keeps quality records complete and audit-ready." },
     ],
     stats: [
       { value: "95%", label: "mAP@50, precision, recall" },
@@ -88,19 +91,21 @@ export const experience: Role[] = [
     bullets: [
       {
         label: "DOE & Predictive Modelling",
-        gist: "CCD-RSM, D-optimal and mixed factorial designs across additive manufacturing and robotics.",
         text: "Designed and ran CCD-RSM, D-optimal, and mixed factorial DOE experiments across additive manufacturing and robotics domains.",
       },
       {
         label: "Automation",
-        gist: "R and Python pipelines combining ANOVA and ML optimization replace manual analysis.",
         text: "Developed R/Python pipelines combining ANOVA and ML-based optimization to replace manual statistical analysis.",
       },
       {
         label: "Curriculum Adoption",
-        gist: "The pipeline now teaches DOE methodology to THD students.",
         text: "That pipeline is now used to teach DOE methodology to THD students.",
       },
+    ],
+    proof: [
+      { hero: "3", cap: "DOE designs", line: "CCD-RSM, D-optimal and mixed factorial runs across additive manufacturing and robotics." },
+      { hero: "ANOVA + ML", cap: "optimization", line: "R and Python pipelines replaced manual statistical analysis." },
+      { hero: "Taught", cap: "at THD", line: "The pipeline is now used to teach DOE methodology to THD students." },
     ],
     stats: [
       { value: "3", label: "DOE designs: CCD-RSM, D-optimal, mixed factorial" },
@@ -120,19 +125,21 @@ export const experience: Role[] = [
     bullets: [
       {
         label: "CI/CD Automation",
-        gist: "GitLab, Jenkins and SonarQube pipelines cut deployment from 48 hours to under 30 minutes.",
         text: "Replaced manual deployment steps with GitLab, Jenkins, and SonarQube pipelines for IoT firmware and backend releases, cutting deployment time from 48 hours to under 30 minutes and moving release cadence from bi-weekly to on-demand.",
       },
       {
         label: "Cloud Infrastructure",
-        gist: "Terraform on Amazon EKS runs 50+ microservices across 300+ pods in 4 environments.",
         text: "Provisioned and managed Terraform-based infrastructure on Kubernetes (Amazon EKS), containerizing and running 50+ microservices across 300+ pods with Docker in 4 lifecycle environments, monitored through custom PostgreSQL-backed KPI dashboards in Grafana.",
       },
       {
         label: "Real-Time IoT Pipelines",
-        gist: "AWS IoT Core, Lambda and IoT Analytics sustain 99.99% uptime across 10,000+ devices.",
         text: "Deployed AWS IoT Core, Lambda, and IoT Analytics for an event-driven data architecture over MQTT and HTTP, sustaining 99.99% uptime across 10,000+ active edge devices and 2M+ daily events.",
       },
+    ],
+    proof: [
+      { hero: "48h → <30min", cap: "deployment", line: "GitLab, Jenkins and SonarQube pipelines replaced manual steps. Releases now ship on demand." },
+      { hero: "99.99%", cap: "uptime", line: "AWS IoT Core, Lambda and IoT Analytics handled 2M+ daily events from 10,000+ devices." },
+      { hero: "300+", cap: "pods", line: "Terraform on Amazon EKS ran 50+ microservices in 4 environments, watched in Grafana." },
     ],
     stats: [
       { value: "48h → <30min", label: "deployment time" },
@@ -148,7 +155,8 @@ export type Project = {
   slug: string;
   number: string; // index shown on the card
   title: string;
-  repo: string | null; // GitHub repo name, null if not public
+  repo: string | null; // repo name under github.com/thelostbong, null if it is not mine
+  repoUrl?: string; // full link for a team repo that lives under someone else's account
   objective: string;
   summary: string;
   metricsLine: string; // one sentence that ties the metrics together; *asterisks* mark the figures
@@ -222,27 +230,8 @@ export const projects: Project[] = [
     media: { cover: "/img/missions/threadline.jpg" },
   },
   {
-    slug: "impact-twin",
-    number: "04",
-    title: "Zollhof Impact Digital Twin",
-    repo: null, // Team hackathon project, no public repo. Add a link here if the team publishes one.
-    objective:
-      "Score a startup's impact against recognised frameworks, inside an 8-hour hackathon build.",
-    summary:
-      "Built with my team in TypeScript at the Claude Impact Lab Hackathon in Nuremberg. One Claude Opus call returns a Zod-validated, multi-dimensional impact profile against the IMP framework, IRIS+ themes, and UN SDG targets, shipped live as a Vercel serverless API.",
-    metricsLine:
-      "Built in *8 hours*, with a single Claude Opus call producing each impact profile.",
-    stack: ["TypeScript", "Claude Opus", "Zod", "Vercel serverless"],
-    stats: [
-      { value: "8h", label: "build window" },
-      { value: "1", label: "Claude Opus call per profile" },
-    ],
-    topics: ["hackathon", "typescript", "llm", "impact-measurement"],
-    media: { cover: "/img/missions/impact-twin.jpg" },
-  },
-  {
     slug: "heartbeat",
-    number: "05",
+    number: "04",
     title: "Fetal Health Classification, ML Pipeline",
     repo: "Fetal_Health_Classification_using_Machine_Learning",
     objective:
@@ -261,7 +250,7 @@ export const projects: Project[] = [
   },
   {
     slug: "stockpile",
-    number: "06",
+    number: "05",
     title: "Cost-Aware Demand Forecasting",
     repo: "Cost-aware-demand-forecasting",
     objective:
@@ -277,6 +266,26 @@ export const projects: Project[] = [
     ],
     topics: ["time-series", "supply-chain", "forecasting", "arima", "prophet", "demand-forecasting"],
     media: { cover: "/img/missions/stockpile.jpg" },
+  },
+  {
+    slug: "impact-twin",
+    number: "06",
+    title: "Zollhof Impact Digital Twin",
+    repo: null,
+    repoUrl: "https://github.com/MaheshBhushan/pitchprint", // team hackathon project, repo owned by a teammate
+    objective:
+      "Score a startup's impact against recognised frameworks, inside an 8-hour hackathon build.",
+    summary:
+      "Built with my team in TypeScript at the Claude Impact Lab Hackathon in Nuremberg. One Claude Opus call returns a Zod-validated, multi-dimensional impact profile against the IMP framework, IRIS+ themes, and UN SDG targets, shipped live as a Vercel serverless API.",
+    metricsLine:
+      "Built in *8 hours*, with a single Claude Opus call producing each impact profile.",
+    stack: ["TypeScript", "Claude Opus", "Zod", "Vercel serverless"],
+    stats: [
+      { value: "8h", label: "build window" },
+      { value: "1", label: "Claude Opus call per profile" },
+    ],
+    topics: ["hackathon", "typescript", "llm", "impact-measurement"],
+    media: { cover: "/img/missions/impact-twin.jpg" },
   },
 ];
 
@@ -394,34 +403,30 @@ export const archive: ArchiveEntry[] = [
   },
 ];
 
-export type SkillGroup = { group: string; items: string[] };
+// core: what I would be hired for, shown large. also: the rest of the toolkit, shown small.
+export type SkillGroup = { group: string; core: string[]; also: string[] };
 
-// Skills in four groups. Items are copied from the resume's Technical Skills.
+// Skills in four groups, MLOps first. Items are from the resume's Technical Skills.
 export const skills: SkillGroup[] = [
   {
-    group: "ML / Computer Vision",
-    items: [
-      "YOLOv12", "OpenCV", "CLIP", "Hugging Face Transformers", "Scikit-learn",
-      "PyTorch", "TensorFlow", "Keras", "LoRA fine-tuning", "Diffusion Models",
-    ],
-  },
-  {
     group: "MLOps & Infrastructure",
-    items: [
-      "Docker", "Kubernetes", "Terraform", "GitLab CI/CD", "Jenkins", "MLflow",
-      "AWS (IoT Core, Lambda, CloudFormation)", "Grafana",
-    ],
+    core: ["Kubernetes", "Terraform", "Docker", "AWS"],
+    also: ["GitLab CI/CD", "Jenkins", "MLflow", "Grafana", "IoT Core", "Lambda", "CloudFormation"],
   },
   {
-    group: "Edge & Embedded",
-    items: ["Raspberry Pi 5", "ESP32", "MQTT", "CoAP", "REST API"],
+    group: "ML & Computer Vision",
+    core: ["PyTorch", "YOLOv12", "OpenCV"],
+    also: ["Hugging Face Transformers", "Scikit-learn", "TensorFlow", "Keras", "CLIP", "LoRA fine-tuning", "Diffusion models"],
   },
   {
     group: "Programming",
-    items: [
-      "Python (NumPy, Pandas, FastAPI)", "R", "PostgreSQL",
-      "JavaScript / TypeScript", "HTML / CSS",
-    ],
+    core: ["Python", "FastAPI", "R"],
+    also: ["NumPy", "Pandas", "PostgreSQL", "TypeScript", "JavaScript", "HTML / CSS"],
+  },
+  {
+    group: "Edge & Embedded",
+    core: ["Raspberry Pi 5", "ESP32", "MQTT"],
+    also: ["CoAP", "REST API"],
   },
 ];
 

@@ -166,11 +166,11 @@ export function buildGear(
 
   function anchorWorld(id: SectionId, out: THREE.Vector3) {
     switch (id) {
-      case "projects":
+      case "education":
         return bones[B.head].getWorldPosition(out).add(_p.set(-0.09, 0.2, 0.05));
       case "experience":
         return bones[B.spine2].getWorldPosition(out).add(_p.set(-0.11, 0.0, 0.16));
-      case "education":
+      case "projects":
         return bones[B.rArm].getWorldPosition(out).add(_p.set(-0.01, 0.07, 0.03));
       case "skills":
       default:

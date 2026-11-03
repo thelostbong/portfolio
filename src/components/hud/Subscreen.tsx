@@ -385,7 +385,7 @@ export default function Subscreen() {
 
       {/* Rail */}
       <div ref={railRef} className="rail absolute bottom-[11vh] left-[31vw] right-0 top-[29vh] cursor-grab">
-        <div ref={trackRef} className={`relative flex h-full w-max items-stretch gap-6 ${active === "projects" || active === "experience" ? "project-track" : "pr-[8vw]"}`}>
+        <div ref={trackRef} className={`relative flex h-full w-max items-stretch gap-6 ${active === "projects" ? "project-track" : active === "experience" ? "project-track exp-track" : "pr-[8vw]"}`}>
           {cards.map((c, i) => (
             <div key={i} data-slot className="flex h-full shrink-0 items-center">
               {c}

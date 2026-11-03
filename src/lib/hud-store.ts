@@ -4,9 +4,9 @@ export type SectionId = "education" | "experience" | "projects" | "skills";
 
 // The order here is the order of the scroll loop: landing, then each section, then back to landing.
 export const SECTIONS: { id: SectionId; label: string }[] = [
-  { id: "education", label: "Education" },
-  { id: "experience", label: "Experience" },
   { id: "projects", label: "Projects" },
+  { id: "experience", label: "Experience" },
+  { id: "education", label: "Education" },
   { id: "skills", label: "Skills" },
 ];
 

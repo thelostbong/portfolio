@@ -267,11 +267,16 @@ body {
 }
 
 /* ---- Projects: one card fills the rail, neighbours are blurred ---- */
-.project-card {
-  width: min(calc(69vw - 96px), 940px);
-}
 .project-track {
-  padding-right: max(96px, calc(69vw - 940px));
+  --slot: min(calc(69vw - 96px), 940px);
+  padding-right: max(96px, calc(69vw - var(--slot)));
+}
+/* Experience uses a narrower slot so each role reads as a compact box. */
+.exp-track {
+  --slot: min(calc(69vw - 96px), 720px);
+}
+.project-card {
+  width: var(--slot, min(calc(69vw - 96px), 940px));
 }
 
 /* ---- Project scenes (SVG, drawn in viz.tsx) ---- */
