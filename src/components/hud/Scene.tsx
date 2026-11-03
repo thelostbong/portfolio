@@ -3,7 +3,8 @@
 import { Suspense, useEffect, useMemo } from "react";
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import { Environment, Lightformer } from "@react-three/drei";
-import { Bloom, ChromaticAberration, EffectComposer, Noise, Vignette } from "@react-three/postprocessing";
+import { Bloom, EffectComposer, Noise, Sharpness, ToneMapping, Vignette } from "@react-three/postprocessing";
+import { ToneMappingMode } from "postprocessing";
 import * as THREE from "three";
 import Operator from "./Operator";
 import { pointer, useHud, type SectionId } from "@/lib/hud-store";
@@ -64,30 +65,53 @@ function Backdrop() {
 export default function Scene() {
   return (
     <Canvas
-      dpr={[1, 1.75]}
+      dpr={[1, 2]}
+      shadows="percentage"
       camera={{ fov: 26, position: VIEWS.home.pos, near: 0.1, far: 30 }}
       gl={{ antialias: true, powerPreference: "high-performance" }}
       className="!absolute inset-0"
     >
       <color attach="background" args={["#040b10"]} />
       <fog attach="fog" args={["#040b10", 5, 11]} />
-      <hemisphereLight args={["#2a6c7e", "#03080b", 0.32]} />
-      <directionalLight position={[2.2, 2.8, 3.2]} intensity={0.85} color="#a9dbe6" />
-      <pointLight position={[-1.7, 2.0, -1.5]} intensity={4.5} distance={7} color="#38c8d8" />
-      <pointLight position={[1.9, 1.7, -1.3]} intensity={3} distance={7} color="#2b9fb4" />
-      <Environment resolution={128}>
-        <Lightformer intensity={1.1} color="#38c8d8" position={[-4, 3, -3]} scale={[6, 2, 1]} />
-        <Lightformer intensity={0.55} color="#9ad9e6" position={[4, 2, 3]} scale={[4, 4, 1]} />
+      <hemisphereLight args={["#3b6f7b", "#03080b", 0.16]} />
+      {/* Key: a cool white source from the front right that shades the body and casts its shadows. */}
+      <directionalLight
+        position={[2.1, 3.1, 3.0]}
+        intensity={2.2}
+        color="#eef8fa"
+        castShadow
+        shadow-mapSize={[2048, 2048]}
+        shadow-bias={-0.0004}
+        shadow-normalBias={0.02}
+        shadow-radius={3}
+        shadow-camera-left={-1.4}
+        shadow-camera-right={1.4}
+        shadow-camera-top={2.4}
+        shadow-camera-bottom={0.2}
+        shadow-camera-near={0.5}
+        shadow-camera-far={9}
+      />
+      {/* Fill from the left, low, so the shadow side keeps shape. */}
+      <directionalLight position={[-2.6, 1.3, 2.4]} intensity={0.5} color="#b9dbe3" />
+      {/* Two cyan rims from behind pick out the silhouette against the backdrop. */}
+      <pointLight position={[-1.7, 2.0, -1.5]} intensity={3.4} distance={7} color="#38c8d8" />
+      <pointLight position={[1.9, 1.7, -1.3]} intensity={2.6} distance={7} color="#2b9fb4" />
+      <Environment resolution={256} environmentIntensity={0.65}>
+        <Lightformer form="rect" intensity={1.1} color="#38c8d8" position={[-4, 3, -3]} scale={[6, 2, 1]} />
+        <Lightformer form="rect" intensity={1.4} color="#e8f6f9" position={[3.5, 4, 2.5]} scale={[5, 0.7, 1]} />
+        <Lightformer form="rect" intensity={0.9} color="#9ad9e6" position={[-3.5, 1.5, 3]} scale={[0.7, 4, 1]} />
+        <Lightformer form="rect" intensity={0.5} color="#9ad9e6" position={[4, 1, 2]} scale={[2, 3, 1]} />
       </Environment>
       <Backdrop />
       <CameraRig />
       <Suspense fallback={null}>
         <Operator />
       </Suspense>
-      <EffectComposer multisampling={0}>
-        <Bloom intensity={0.55} luminanceThreshold={0.8} luminanceSmoothing={0.2} mipmapBlur />
-        <ChromaticAberration offset={new THREE.Vector2(0.0007, 0.0009)} radialModulation={false} modulationOffset={0} />
-        <Noise opacity={0.07} />
+      <EffectComposer multisampling={4}>
+        <Bloom intensity={0.45} luminanceThreshold={0.9} luminanceSmoothing={0.2} mipmapBlur />
+        <ToneMapping mode={ToneMappingMode.NEUTRAL} />
+        <Sharpness sharpness={0.4} radius={1} />
+        <Noise opacity={0.03} />
         <Vignette offset={0.25} darkness={0.85} />
       </EffectComposer>
     </Canvas>

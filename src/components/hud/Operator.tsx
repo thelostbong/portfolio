@@ -44,10 +44,69 @@ function rotateInWorld(bone: THREE.Object3D, q: THREE.Quaternion) {
   bone.quaternion.premultiply(_q2);
 }
 
-// Grade the body material: desaturate toward teal, add a cyan rim and a slow scan sweep.
+// Grade the body material: keep the painted texture, cool it slightly toward the HUD teal,
+// vary roughness by how dark a surface is (dark plates and straps read as glossier gear,
+// fabric as matte), and add a thin cyan rim and a slow scan sweep.
 function gradeMaterial(mat: THREE.MeshStandardMaterial, uTime: { value: number }) {
-  mat.roughness = Math.max(mat.roughness, 0.62);
-  mat.metalness = Math.min(mat.metalness, 0.35);
+  mat.roughness = 1;
+  mat.metalness = 0;
+  mat.envMapIntensity = 1;
+  if (mat.normalScale) mat.normalScale.set(1.35, 1.35);
+  [mat.map, mat.normalMap].forEach((t) => {
+    if (t) {
+      t.anisotropy = 16;
+      t.needsUpdate = true;
+    }
+  });
+  mat.onBeforeCompile = (shader) => {
+    shader.uniforms.uTime = uTime;
+    shader.vertexShader = shader.vertexShader
+      .replace("#include <common>", "#include <common>\nvarying vec3 vWorldPos;")
+      .replace(
+        "#include <project_vertex>",
+        "vWorldPos = (modelMatrix * vec4(transformed, 1.0)).xyz;\n#include <project_vertex>",
+      );
+    shader.fragmentShader = shader.fragmentShader
+      .replace("#include <common>", "#include <common>\nvarying vec3 vWorldPos;\nuniform float uTime;\nfloat gLum;")
+      .replace(
+        "#include <map_fragment>",
+        `#include <map_fragment>
+        gLum = dot(diffuseColor.rgb, vec3(0.299, 0.587, 0.114));
+        diffuseColor.rgb = mix(diffuseColor.rgb, vec3(gLum), 0.35) * vec3(0.92, 0.97, 1.0) * 1.05;`,
+      )
+      .replace(
+        "#include <roughnessmap_fragment>",
+        `#include <roughnessmap_fragment>
+        roughnessFactor = mix(0.42, 0.9, smoothstep(0.05, 0.35, gLum));`,
+      )
+      .replace(
+        "#include <metalnessmap_fragment>",
+        `#include <metalnessmap_fragment>
+        metalnessFactor = 0.3 * (1.0 - smoothstep(0.04, 0.2, gLum));`,
+      )
+      .replace(
+        "#include <emissivemap_fragment>",
+        `#include <emissivemap_fragment>
+        float rim = pow(1.0 - saturate(dot(normalize(vViewPosition), normal)), 3.2);
+        totalEmissiveRadiance += vec3(0.16, 0.78, 0.86) * rim * 0.38;
+        float sweepY = mod(uTime * 0.16, 1.6) * 2.0 - 0.3;
+        float sweep = smoothstep(0.04, 0.0, abs(vWorldPos.y - sweepY));
+        totalEmissiveRadiance += vec3(0.1, 0.55, 0.62) * sweep * 0.22;`,
+      );
+  };
+  mat.needsUpdate = true;
+}
+
+// Visor: dark glass. A thin cyan fresnel edge and faint scan lines give it a display feel,
+// while the environment shows as soft streaks instead of one flat colour.
+function visorMaterial(mat: THREE.MeshStandardMaterial, uTime: { value: number }) {
+  mat.map = null;
+  mat.transparent = false;
+  mat.color.set("#03090c");
+  mat.metalness = 0.55;
+  mat.roughness = 0.2;
+  mat.envMapIntensity = 0.7;
+  mat.emissive.set("#000000");
   mat.onBeforeCompile = (shader) => {
     shader.uniforms.uTime = uTime;
     shader.vertexShader = shader.vertexShader
@@ -59,19 +118,11 @@ function gradeMaterial(mat: THREE.MeshStandardMaterial, uTime: { value: number }
     shader.fragmentShader = shader.fragmentShader
       .replace("#include <common>", "#include <common>\nvarying vec3 vWorldPos;\nuniform float uTime;")
       .replace(
-        "#include <map_fragment>",
-        `#include <map_fragment>
-        float lum = dot(diffuseColor.rgb, vec3(0.299, 0.587, 0.114));
-        diffuseColor.rgb = mix(diffuseColor.rgb, vec3(lum), 0.72) * vec3(0.22, 0.32, 0.37);`,
-      )
-      .replace(
         "#include <emissivemap_fragment>",
         `#include <emissivemap_fragment>
-        float rim = pow(1.0 - saturate(dot(normalize(vViewPosition), normal)), 2.6);
-        totalEmissiveRadiance += vec3(0.16, 0.78, 0.86) * rim * 0.85;
-        float sweepY = mod(uTime * 0.16, 1.6) * 2.0 - 0.3;
-        float sweep = smoothstep(0.045, 0.0, abs(vWorldPos.y - sweepY));
-        totalEmissiveRadiance += vec3(0.1, 0.55, 0.62) * sweep * 0.4;`,
+        float fres = pow(1.0 - saturate(dot(normalize(vViewPosition), normal)), 2.2);
+        float lines = 0.5 + 0.5 * sin(vWorldPos.y * 360.0 - uTime * 1.2);
+        totalEmissiveRadiance += vec3(0.1, 0.62, 0.72) * (fres * 0.55 + 0.02 * lines);`,
       );
   };
   mat.needsUpdate = true;
@@ -99,16 +150,14 @@ export default function Operator() {
       const m = o as THREE.SkinnedMesh;
       if (m.isSkinnedMesh) {
         m.frustumCulled = false;
+        m.castShadow = true;
+        m.receiveShadow = true;
         const mats = Array.isArray(m.material) ? m.material : [m.material];
         mats.forEach((mat) => {
           const std = mat as THREE.MeshStandardMaterial;
           if (std.name.toLowerCase().includes("visor")) {
             std.transparent = false;
-            std.color.set("#040d12");
-            std.metalness = 0.9;
-            std.roughness = 0.12;
-            std.emissive.set("#1fb6c8");
-            std.emissiveIntensity = 0.1;
+            visorMaterial(std, timeU);
           } else {
             gradeMaterial(std, timeU);
           }

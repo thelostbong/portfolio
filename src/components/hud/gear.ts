@@ -68,7 +68,10 @@ export function buildGear(
 
   function mesh(geo: THREE.BufferGeometry, mat: THREE.Material) {
     disposables.push(geo);
-    return new THREE.Mesh(geo, mat);
+    const m = new THREE.Mesh(geo, mat);
+    m.castShadow = true;
+    m.receiveShadow = true;
+    return m;
   }
 
   const headBase = worldOf(B.head);
