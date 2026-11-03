@@ -40,8 +40,7 @@ export function buildGear(
   const metal = new THREE.MeshStandardMaterial({ color: "#0f2229", roughness: 0.5, metalness: 0.75 });
   const matte = new THREE.MeshStandardMaterial({ color: "#0b171c", roughness: 0.85, metalness: 0.2 });
   const glow = new THREE.MeshBasicMaterial({ color: new THREE.Color(0.15, 1.1, 1.3), toneMapped: false });
-  const lensGlow = new THREE.MeshBasicMaterial({ color: new THREE.Color(0.1, 0.55, 0.65), toneMapped: false });
-  disposables.push(metal, matte, glow, lensGlow);
+  disposables.push(metal, matte, glow);
 
   const worldOf = (name: string) => bones[name].getWorldPosition(new THREE.Vector3());
   const worldQ = (name: string) => bones[name].getWorldQuaternion(new THREE.Quaternion());
@@ -74,33 +73,7 @@ export function buildGear(
     return m;
   }
 
-  const headBase = worldOf(B.head);
   const spineBase = worldOf(B.spine2);
-
-  // ---- Head: comms headset cups, antenna ----
-  for (const s of [-1, 1]) {
-    const cup = mesh(new THREE.CylinderGeometry(0.044, 0.044, 0.04, 20), metal);
-    cup.rotation.z = Math.PI / 2;
-    add(cup, B.head, new THREE.Vector3(s * 0.112, headBase.y + 0.1, headBase.z + 0.055));
-    const ring = mesh(new THREE.TorusGeometry(0.036, 0.004, 8, 28), glow);
-    ring.rotation.y = Math.PI / 2;
-    add(ring, B.head, new THREE.Vector3(s * 0.134, headBase.y + 0.1, headBase.z + 0.055));
-  }
-  const antenna = mesh(new THREE.CylinderGeometry(0.0045, 0.0045, 0.18, 8), matte);
-  antenna.rotation.x = -0.18;
-  add(antenna, B.head, new THREE.Vector3(0.075, headBase.y + 0.26, headBase.z - 0.04));
-  const antennaTip = mesh(new THREE.SphereGeometry(0.008, 10, 10), glow);
-  add(antennaTip, B.head, new THREE.Vector3(0.075, headBase.y + 0.35, headBase.z - 0.055));
-
-  // ---- Head: night-vision mount and flipped-up monocular on the helmet brow ----
-  const mount = mesh(new THREE.BoxGeometry(0.075, 0.032, 0.05), metal);
-  add(mount, B.head, new THREE.Vector3(0, headBase.y + 0.225, headBase.z + 0.11));
-  const tube = mesh(new THREE.CylinderGeometry(0.022, 0.026, 0.085, 18), metal);
-  tube.rotation.x = Math.PI / 2 - 0.5;
-  add(tube, B.head, new THREE.Vector3(0, headBase.y + 0.255, headBase.z + 0.14));
-  const lens = mesh(new THREE.CircleGeometry(0.017, 20), lensGlow);
-  lens.rotation.x = -0.5;
-  add(lens, B.head, new THREE.Vector3(0, headBase.y + 0.2785, headBase.z + 0.18));
 
   // ---- Chest rig: plate carrier trim, three magazine-style pouches, shoulder lamps ----
   for (let i = -1; i <= 1; i++) {
