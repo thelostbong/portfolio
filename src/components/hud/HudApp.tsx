@@ -17,14 +17,6 @@ function PlainContent() {
         {profile.name}, {profile.title}
       </h1>
       <p>{profile.summary}</p>
-      <h2>Experience</h2>
-      <ul>
-        {experienceData.map((r) => (
-          <li key={r.id}>
-            {r.title}, {r.org}, {r.start} to {r.end}. {r.bullets.map((b) => b.text).join(" ")}
-          </li>
-        ))}
-      </ul>
       <h2>Projects</h2>
       <ul>
         {projectData.map((m) => (
@@ -40,11 +32,11 @@ function PlainContent() {
             </li>
           ))}
       </ul>
-      <h2>Skills</h2>
+      <h2>Experience</h2>
       <ul>
-        {skillData.map((g) => (
-          <li key={g.group}>
-            {g.group}: {[...g.core, ...g.also].join(", ")}
+        {experienceData.map((r) => (
+          <li key={r.id}>
+            {r.title}, {r.org}, {r.start} to {r.end}. {r.proof.map((x) => `${x.hero} ${x.cap}. ${x.line}`).join(" ")}
           </li>
         ))}
       </ul>
@@ -56,6 +48,14 @@ function PlainContent() {
           </li>
         ))}
         <li>{languageData.map((c) => `${c.language} ${c.level}`).join(", ")}</li>
+      </ul>
+      <h2>Skills</h2>
+      <ul>
+        {skillData.map((g) => (
+          <li key={g.group}>
+            {g.group}: {[...g.core, ...g.also].join(", ")}
+          </li>
+        ))}
       </ul>
       <h2>Contact</h2>
       <p>
