@@ -142,8 +142,8 @@ export default function HudApp() {
 
       {/* Monitor bezel with a notch */}
       <div className="pointer-events-none absolute inset-0 z-30">
-        <div className="absolute inset-[10px] rounded-[22px] border border-cyan/20 shadow-[0_0_0_14px_#02070a]" />
-        <div className="absolute left-1/2 top-[10px] h-[14px] w-[210px] -translate-x-1/2 rounded-b-[12px] border border-t-0 border-cyan/25 bg-[#02070a]">
+        <div className="absolute inset-[10px] rounded-[22px] border border-cyan/20 shadow-[0_0_0_14px_#000000]" />
+        <div className="absolute left-1/2 top-[10px] h-[14px] w-[210px] -translate-x-1/2 rounded-b-[12px] border border-t-0 border-cyan/25 bg-[#000000]">
           <span className="absolute left-4 top-[5px] h-[3px] w-[110px] rounded bg-cyan/30" />
           <span className="absolute right-4 top-[3px] h-[6px] w-[6px] rounded-full bg-cyan" style={{ animation: "pulse-dot 2.4s infinite" }} />
         </div>

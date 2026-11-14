@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { profile } from "@/content";
-import { anchors, headRing, SECTIONS, useHud, type SectionId } from "@/lib/hud-store";
+import { anchors, SECTIONS, useHud, type SectionId } from "@/lib/hud-store";
 
 type Callout = { id: SectionId; side: "left" | "right"; top: string; meta: string };
 
@@ -43,7 +43,7 @@ function TerrainMap() {
     const g = c.getContext("2d");
     if (!g) return;
     g.scale(dpr, dpr);
-    g.strokeStyle = "rgba(56,200,216,0.75)";
+    g.strokeStyle = "rgba(170,136,255,0.75)";
     g.lineWidth = 1;
     const cols = 22;
     const rows = 12;
@@ -77,11 +77,11 @@ function TerrainMap() {
     }
     g.globalAlpha = 1;
     const [pxx, pyy] = project(12, 6);
-    g.fillStyle = "#d9ece6";
+    g.fillStyle = "#dddddd";
     g.beginPath();
     g.arc(pxx, pyy, 2.6, 0, Math.PI * 2);
     g.fill();
-    g.strokeStyle = "#d9ece6";
+    g.strokeStyle = "#dddddd";
     g.beginPath();
     g.arc(pxx, pyy, 7, 0, Math.PI * 2);
     g.stroke();
@@ -103,7 +103,6 @@ export default function Landing() {
   const labelRefs = useRef<Partial<Record<SectionId, HTMLButtonElement | null>>>({});
   const pathRefs = useRef<Partial<Record<SectionId, SVGPathElement | null>>>({});
   const dotRefs = useRef<Partial<Record<SectionId, SVGCircleElement | null>>>({});
-  const ringRef = useRef<SVGGElement>(null);
 
   useEffect(() => {
     let raf = 0;
@@ -122,7 +121,6 @@ export default function Landing() {
         dot.setAttribute("cx", String(a.x));
         dot.setAttribute("cy", String(a.y));
       }
-      if (ringRef.current) ringRef.current.setAttribute("transform", `translate(${headRing.x} ${headRing.y})`);
       raf = requestAnimationFrame(loop);
     };
     raf = requestAnimationFrame(loop);
@@ -140,10 +138,10 @@ export default function Landing() {
       <div className="pointer-events-none absolute bottom-[19vh] left-[5vw] top-[19vh] w-3 border-y border-l border-cyan/40" />
       <div className="pointer-events-none absolute bottom-[19vh] right-[5vw] top-[19vh] w-3 border-y border-r border-cyan/40" />
       <svg className="pointer-events-none absolute inset-0 h-full w-full" aria-hidden="true">
-        {/* Leader lines from labels to body anchors */}
+        {/* Leader lines from labels to anchors on the particle ring */}
         <g fill="none" strokeWidth="1">
           {CALLOUTS.map((c) => (
-            <g key={c.id} style={{ color: hover === c.id ? "#d9ece6" : "#38c8d8" }}>
+            <g key={c.id} style={{ color: hover === c.id ? "#dddddd" : "#aa88ff" }}>
               <path
                 ref={(el) => {
                   pathRefs.current[c.id] = el;
@@ -160,12 +158,6 @@ export default function Landing() {
               />
             </g>
           ))}
-        </g>
-        {/* Scanner ring on the helmet */}
-        <g ref={ringRef}>
-          <circle r="66" fill="none" stroke="rgba(190,243,247,0.85)" strokeWidth="1.5" strokeDasharray="3 7" style={{ transformBox: "fill-box", transformOrigin: "center", animation: "spin-slow 24s linear infinite" }} />
-          <circle r="52" fill="none" stroke="#bff3f7" strokeWidth="2.5" strokeDasharray="70 256" style={{ transformBox: "fill-box", transformOrigin: "center", animation: "spin-slow 7s linear infinite reverse" }} />
-          <path d="M-74,0 h12 M62,0 h12 M0,-74 v12 M0,62 v12" stroke="#bff3f7" strokeWidth="1.5" />
         </g>
       </svg>
 
@@ -247,7 +239,7 @@ export default function Landing() {
 
       {/* Scroll hint */}
       <div className="pointer-events-none absolute inset-x-0 bottom-[10vh] flex flex-col items-center gap-1">
-        <span className="font-display text-[clamp(17px,1.35vw,22px)] font-bold uppercase tracking-[0.34em] text-[#bff3f7] [text-shadow:0_0_18px_rgb(56_200_216/0.8)]">
+        <span className="font-display text-[clamp(17px,1.35vw,22px)] font-bold uppercase tracking-[0.34em] text-[#e3d8ff] [text-shadow:0_0_18px_rgb(170_136_255/0.8)]">
           Scroll to explore
         </span>
         <span aria-hidden="true" className="scroll-chevrons flex flex-col items-center">

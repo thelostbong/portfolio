@@ -23,7 +23,7 @@ type HudState = {
   active: SectionId | null;
   entry: Entry;
   hover: SectionId | null;
-  ready: boolean; // operator model loaded and first frame drawn
+  ready: boolean; // particle scene running
   detail: string | null; // key of the card whose detail panel is open
   setDetail: (key: string | null) => void;
   setActive: (id: SectionId | null, entry?: Entry) => void;
@@ -43,7 +43,7 @@ export const useHud = create<HudState>((set) => ({
   setReady: (ready) => set({ ready }),
 }));
 
-// Screen-space positions of the body anchors. The 3D scene writes these every
+// Screen-space positions of the ring anchors. The 3D scene writes these every
 // frame, the DOM overlay reads them to draw leader lines. Kept outside React
 // state on purpose: it changes 60 times a second.
 export type Anchor = { x: number; y: number; visible: boolean };
@@ -53,9 +53,6 @@ export const anchors: Record<SectionId, Anchor> = {
   skills: { x: 0, y: 0, visible: false },
   education: { x: 0, y: 0, visible: false },
 };
-
-// Centre of the helmet, for the scanner ring.
-export const headRing: Anchor = { x: 0, y: 0, visible: false };
 
 // Pointer position, -1..1, y up. Written by the overlay, read by the scene.
 export const pointer = { x: 0, y: 0 };

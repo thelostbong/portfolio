@@ -1,119 +1,715 @@
 "use client";
 
-import { Suspense, useEffect, useMemo } from "react";
-import { Canvas, useFrame, useThree } from "@react-three/fiber";
-import { Environment, Lightformer } from "@react-three/drei";
-import { Bloom, EffectComposer, Noise, Sharpness, ToneMapping, Vignette } from "@react-three/postprocessing";
-import { ToneMappingMode } from "postprocessing";
+import { useEffect, useRef } from "react";
 import * as THREE from "three";
-import Operator from "./Operator";
-import { pointer, useHud, type SectionId } from "@/lib/hud-store";
+import { anchors, useHud, type SectionId } from "@/lib/hud-store";
 
-type View = { pos: [number, number, number]; look: [number, number, number] };
+// Landing background: a GPU particle cloud that settles onto a sculpted ring and is
+// stirred by the cursor through a small fluid simulation. Everything runs in shaders:
+// one pass moves the particles, eight passes run the fluid, one pass draws the points.
 
-// Landing frames the operator centred. Each section dollies to its body part and
-// slides the operator to the left third so the card rail has the rest of the screen.
-const VIEWS: Record<"home" | SectionId, View> = {
-  home: { pos: [0, 1.48, 2.6], look: [0, 1.4, 0] },
-  experience: { pos: [0.1, 1.4, 2.25], look: [0.64, 1.36, 0] },
-  projects: { pos: [0.1, 1.66, 2.0], look: [0.6, 1.58, 0] },
-  skills: { pos: [0.2, 1.22, 2.1], look: [0.68, 1.2, 0] },
-  education: { pos: [0.1, 1.5, 2.1], look: [0.62, 1.46, 0] },
+const FLUID = {
+  sim: 256,
+  dye: 512,
+  velocityDissipation: 0.98,
+  densityDissipation: 0.97,
+  pressureDissipation: 0.95,
+  pressureIterations: 5,
+  curl: 30,
+  dt: 1 / 60,
 };
 
-function CameraRig() {
-  const camera = useThree((s) => s.camera);
-  const target = useMemo(() => new THREE.Vector3(...VIEWS.home.look), []);
-  useFrame((_, dt) => {
-    const v = VIEWS[useHud.getState().active ?? "home"];
-    const k = 2.4;
-    camera.position.x = THREE.MathUtils.damp(camera.position.x, v.pos[0] + pointer.x * 0.07, k, dt);
-    camera.position.y = THREE.MathUtils.damp(camera.position.y, v.pos[1] + pointer.y * 0.035, k, dt);
-    camera.position.z = THREE.MathUtils.damp(camera.position.z, v.pos[2], k, dt);
-    target.x = THREE.MathUtils.damp(target.x, v.look[0], k, dt);
-    target.y = THREE.MathUtils.damp(target.y, v.look[1], k, dt);
-    target.z = THREE.MathUtils.damp(target.z, v.look[2], k, dt);
-    camera.lookAt(target);
+// Where the cloud sits. On the landing it is centred between the callouts; inside a
+// section it slides to the left third so the card rail has the rest of the screen.
+const SHIFT_HOME = -0.5;
+const SHIFT_SECTION = -2.5;
+const SCALE_HOME = 3.1;
+const SCALE_SECTION = 2.05;
+
+// Points on the ring, in the cloud's own space, that the landing leader lines attach to.
+const ANCHOR_LOCAL: Record<SectionId, [number, number, number]> = {
+  projects: [-0.2, 0.17, 0.02],
+  experience: [-0.27, -0.03, 0.02],
+  education: [0.19, 0.19, 0.02],
+  skills: [0.27, -0.05, 0.02],
+};
+
+const QUAD_VERT = /* glsl */ `
+  varying vec2 vUv;
+  void main() {
+    vUv = uv;
+    gl_Position = vec4(position.xy, 0.0, 1.0);
+  }
+`;
+
+const SPLAT_FRAG = /* glsl */ `
+  precision highp float;
+  varying vec2 vUv;
+  uniform sampler2D uTarget;
+  uniform float uAspect;
+  uniform vec3 uColor;
+  uniform vec2 uFrom;
+  uniform vec2 uTo;
+  uniform float uRadius;
+  void main() {
+    vec2 a = vec2(uAspect, 1.0);
+    vec2 p = (vUv - uFrom) * a;
+    vec2 ab = (uTo - uFrom) * a;
+    float h = clamp(dot(p, ab) / max(dot(ab, ab), 1e-6), 0.0, 1.0);
+    vec2 d = p - ab * h;
+    vec3 splat = exp(-dot(d, d) / (uRadius * uRadius)) * uColor;
+    gl_FragColor = vec4(texture2D(uTarget, vUv).xyz + splat, 1.0);
+  }
+`;
+
+const CURL_FRAG = /* glsl */ `
+  precision highp float;
+  varying vec2 vUv;
+  uniform sampler2D uVelocity;
+  uniform vec2 uTexel;
+  void main() {
+    float L = texture2D(uVelocity, vUv - vec2(uTexel.x, 0.0)).y;
+    float R = texture2D(uVelocity, vUv + vec2(uTexel.x, 0.0)).y;
+    float T = texture2D(uVelocity, vUv + vec2(0.0, uTexel.y)).x;
+    float B = texture2D(uVelocity, vUv - vec2(0.0, uTexel.y)).x;
+    gl_FragColor = vec4(0.5 * (R - L - T + B), 0.0, 0.0, 1.0);
+  }
+`;
+
+const VORTICITY_FRAG = /* glsl */ `
+  precision highp float;
+  varying vec2 vUv;
+  uniform sampler2D uVelocity;
+  uniform sampler2D uCurl;
+  uniform vec2 uTexel;
+  uniform float uCurlStrength;
+  uniform float uDt;
+  void main() {
+    float L = texture2D(uCurl, vUv - vec2(uTexel.x, 0.0)).x;
+    float R = texture2D(uCurl, vUv + vec2(uTexel.x, 0.0)).x;
+    float T = texture2D(uCurl, vUv + vec2(0.0, uTexel.y)).x;
+    float B = texture2D(uCurl, vUv - vec2(0.0, uTexel.y)).x;
+    float C = texture2D(uCurl, vUv).x;
+    vec2 force = 0.5 * vec2(abs(T) - abs(B), abs(R) - abs(L));
+    force /= length(force) + 0.0001;
+    force *= uCurlStrength * C;
+    force.y *= -1.0;
+    vec2 vel = texture2D(uVelocity, vUv).xy;
+    gl_FragColor = vec4(vel + force * uDt, 0.0, 1.0);
+  }
+`;
+
+const DIVERGENCE_FRAG = /* glsl */ `
+  precision highp float;
+  varying vec2 vUv;
+  uniform sampler2D uVelocity;
+  uniform vec2 uTexel;
+  void main() {
+    float L = texture2D(uVelocity, vUv - vec2(uTexel.x, 0.0)).x;
+    float R = texture2D(uVelocity, vUv + vec2(uTexel.x, 0.0)).x;
+    float T = texture2D(uVelocity, vUv + vec2(0.0, uTexel.y)).y;
+    float B = texture2D(uVelocity, vUv - vec2(0.0, uTexel.y)).y;
+    gl_FragColor = vec4(0.5 * (R - L + T - B), 0.0, 0.0, 1.0);
+  }
+`;
+
+const CLEAR_FRAG = /* glsl */ `
+  precision highp float;
+  varying vec2 vUv;
+  uniform sampler2D uTexture;
+  uniform float uValue;
+  void main() {
+    gl_FragColor = uValue * texture2D(uTexture, vUv);
+  }
+`;
+
+const PRESSURE_FRAG = /* glsl */ `
+  precision highp float;
+  varying vec2 vUv;
+  uniform sampler2D uPressure;
+  uniform sampler2D uDivergence;
+  uniform vec2 uTexel;
+  void main() {
+    float L = texture2D(uPressure, vUv - vec2(uTexel.x, 0.0)).x;
+    float R = texture2D(uPressure, vUv + vec2(uTexel.x, 0.0)).x;
+    float T = texture2D(uPressure, vUv + vec2(0.0, uTexel.y)).x;
+    float B = texture2D(uPressure, vUv - vec2(0.0, uTexel.y)).x;
+    float div = texture2D(uDivergence, vUv).x;
+    gl_FragColor = vec4((L + R + B + T - div) * 0.25, 0.0, 0.0, 1.0);
+  }
+`;
+
+const GRADIENT_FRAG = /* glsl */ `
+  precision highp float;
+  varying vec2 vUv;
+  uniform sampler2D uPressure;
+  uniform sampler2D uVelocity;
+  uniform vec2 uTexel;
+  void main() {
+    float L = texture2D(uPressure, vUv - vec2(uTexel.x, 0.0)).x;
+    float R = texture2D(uPressure, vUv + vec2(uTexel.x, 0.0)).x;
+    float T = texture2D(uPressure, vUv + vec2(0.0, uTexel.y)).x;
+    float B = texture2D(uPressure, vUv - vec2(0.0, uTexel.y)).x;
+    vec2 vel = texture2D(uVelocity, vUv).xy - vec2(R - L, T - B);
+    gl_FragColor = vec4(vel, 0.0, 1.0);
+  }
+`;
+
+const ADVECT_FRAG = /* glsl */ `
+  precision highp float;
+  varying vec2 vUv;
+  uniform sampler2D uVelocity;
+  uniform sampler2D uSource;
+  uniform vec2 uTexel;
+  uniform float uDt;
+  uniform float uDissipation;
+  void main() {
+    vec2 coord = vUv - uDt * texture2D(uVelocity, vUv).xy * uTexel;
+    gl_FragColor = vec4(uDissipation * texture2D(uSource, coord).xyz, 1.0);
+  }
+`;
+
+// The sculpted form: a ring with one large opening whose tube swells into soft lobes
+// and rides up and down as it goes round, mirrored front to back with a soft seam.
+const SDF_GLSL = /* glsl */ `
+  float sdfShape(vec3 p) {
+    if (length(p) > 0.8) return length(p) - 0.7;
+    p.z = sqrt(p.z * p.z + 0.0215) - sqrt(0.012);
+    p.y += 0.55 * p.x * p.x - 0.03;
+    float a = atan(p.y, p.x);
+    float ring = 0.245 + 0.035 * sin(a * 3.0 + 0.6);
+    float tube = 0.082 + 0.03 * sin(a * 2.0 + 1.9) + 0.012 * sin(a * 5.0);
+    float lift = 0.085 + 0.06 * sin(a * 2.0 - 0.7);
+    vec2 q = vec2(length(p.xy) - ring, p.z - lift);
+    return (length(q) - tube) * 0.8;
+  }
+  vec3 sdfNormal(vec3 p) {
+    const vec2 e = vec2(0.001, 0.0);
+    return vec3(
+      sdfShape(p + e.xyy) - sdfShape(p - e.xyy),
+      sdfShape(p + e.yxy) - sdfShape(p - e.yxy),
+      sdfShape(p + e.yyx) - sdfShape(p - e.yyx)
+    ) / (2.0 * e.x);
+  }
+`;
+
+const SIM_FRAG = /* glsl */ `
+  precision highp float;
+  varying vec2 vUv;
+  uniform sampler2D uPositions;
+  uniform sampler2D uOrigin;
+  uniform sampler2D uHome;
+  uniform float uHomeStrength;
+  uniform sampler2D uFluidVelocity;
+  uniform sampler2D uFluidDensity;
+  uniform mat4 uViewProjection;
+  uniform mat4 uModel;
+  uniform mat3 uFlowBasis;
+  uniform float uTime;
+  uniform float uHz;
+  uniform float uMouseStrength;
+
+  ${SDF_GLSL}
+
+  vec3 potential(vec3 p) {
+    return vec3(
+      sin(p.y * 3.1 + 1.3) + sin(p.z * 4.7 + 0.4) * 0.5 + sin((p.x + p.z) * 2.3) * 0.7,
+      sin(p.z * 2.9 + 2.1) + sin(p.x * 5.1 + 3.7) * 0.5 + sin((p.y + p.x) * 2.6) * 0.7,
+      sin(p.x * 3.3 + 0.8) + sin(p.y * 4.3 + 5.2) * 0.5 + sin((p.z + p.y) * 2.1) * 0.7
+    );
+  }
+  vec3 curlNoise(vec3 p) {
+    const float e = 0.1;
+    vec3 dx = potential(p + vec3(e, 0.0, 0.0)) - potential(p - vec3(e, 0.0, 0.0));
+    vec3 dy = potential(p + vec3(0.0, e, 0.0)) - potential(p - vec3(0.0, e, 0.0));
+    vec3 dz = potential(p + vec3(0.0, 0.0, e)) - potential(p - vec3(0.0, 0.0, e));
+    return normalize(vec3(dy.z - dz.y, dz.x - dx.z, dx.y - dy.x) + 1e-5);
+  }
+
+  void main() {
+    vec3 pos = texture2D(uPositions, vUv).xyz;
+    vec3 origin = texture2D(uOrigin, vUv).xyz;
+
+    if (length(pos) > 0.7) pos /= 2.0;
+    pos += curlNoise(pos * 0.1 + uTime * 0.05) * 0.0002 * uHz;
+
+    vec3 gradient = sdfNormal(pos);
+    float sdf = sdfShape(pos);
+    pos += cross(normalize(pos + 1e-5), normalize(gradient + 1e-5)) * 0.0005;
+    pos += -gradient * sdf * 0.5;
+    pos += (origin - pos) * 0.0002 * uHz;
+
+    vec4 clip = uViewProjection * uModel * vec4(pos, 1.0);
+    vec2 screenUv = clip.xy / clip.w * 0.5 + 0.5;
+    vec2 vel = texture2D(uFluidVelocity, screenUv).xy;
+    vel *= min(1.0, 90.0 / (length(vel) + 1e-4));
+    vec3 flow = uFlowBasis * vec3(vel, 0.0);
+    float mask = min(texture2D(uFluidDensity, screenUv).r, 1.0);
+    pos += flow * 0.0001 * uHz * uMouseStrength * mask;
+
+    // Heal: a particle that the cursor has carried off is drawn back to its resting
+    // place on the surface. Close to home it is left alone, so the slow swirl carries on.
+    vec3 away = texture2D(uHome, vUv).xyz - pos;
+    pos += away * uHomeStrength * smoothstep(0.03, 0.14, length(away)) * min(uHz, 2.0);
+
+    gl_FragColor = vec4(pos, 1.0);
+  }
+`;
+
+const POINTS_VERT = /* glsl */ `
+  attribute vec4 random;
+  uniform sampler2D uPositions;
+  uniform float uDpr;
+  varying vec4 vRandom;
+  varying float vScale;
+  void main() {
+    vRandom = random;
+    vec3 pos = texture2D(uPositions, position.xy).xyz;
+    pos *= mix(1.0, 1.5, pow(random.y, 150.0));
+    vec4 mv = modelViewMatrix * vec4(pos, 1.0);
+    float dist = -mv.z;
+    vScale = smoothstep(3.0, 15.0, dist) * mix(0.5, 1.0, random.z);
+    gl_PointSize = 0.04 * uDpr * 2.0 * vScale * (1000.0 / dist);
+    gl_Position = projectionMatrix * mv;
+  }
+`;
+
+const POINTS_FRAG = /* glsl */ `
+  precision highp float;
+  uniform float uTime;
+  uniform float uGain;
+  varying vec4 vRandom;
+  varying float vScale;
+
+  float softLight(float b, float s) {
+    return s < 0.5 ? b - (1.0 - 2.0 * s) * b * (1.0 - b) : b + (2.0 * s - 1.0) * (sqrt(b) - b);
+  }
+  float overlay(float b, float s) {
+    return b < 0.5 ? 2.0 * b * s : 1.0 - 2.0 * (1.0 - b) * (1.0 - s);
+  }
+
+  void main() {
+    vec2 uv = gl_PointCoord - 0.5;
+    if (dot(uv, uv) > 0.25 || vScale < 0.1) discard;
+
+    vec3 color = vec3(mix(0.0, 0.2, vRandom.x));
+    color = mix(color, vec3(0.6, 0.45, 1.0), pow(vRandom.z, 100.0));
+    color *= 0.5 + (0.4 + sin(uTime * 4.0 + vRandom.y * 20.0)) * pow(vRandom.z, 10.0) * 2.5;
+
+    // Soft sphere shading, in place of a matcap texture: lit from the upper left,
+    // with the sprite slowly turning so the grain shimmers.
+    float turn = sin(uTime + vRandom.z * 20.0) * 0.5 + 1.0;
+    vec2 r = mat2(cos(turn), -sin(turn), sin(turn), cos(turn)) * uv * 2.0;
+    vec3 n = vec3(r, sqrt(max(1.0 - dot(r, r), 0.0)));
+    float matcap = clamp(0.5 + 0.5 * dot(n, normalize(vec3(-0.45, 0.6, 0.66))), 0.0, 1.0);
+
+    vec3 lit = vec3(softLight(color.r, matcap), softLight(color.g, matcap), softLight(color.b, matcap));
+    color = mix(color, lit, 0.8);
+    vec3 over = vec3(overlay(color.r, matcap), overlay(color.g, matcap), overlay(color.b, matcap));
+    color = mix(color, over, 0.2);
+
+    gl_FragColor = vec4(color * uGain, 1.0);
+  }
+`;
+
+type Double = { read: THREE.WebGLRenderTarget; write: THREE.WebGLRenderTarget; swap: () => void };
+
+function target(size: number, type: THREE.TextureDataType, filter: THREE.MagnificationTextureFilter) {
+  return new THREE.WebGLRenderTarget(size, size, {
+    type,
+    format: THREE.RGBAFormat,
+    minFilter: filter,
+    magFilter: filter,
+    wrapS: THREE.ClampToEdgeWrapping,
+    wrapT: THREE.ClampToEdgeWrapping,
+    depthBuffer: false,
+    stencilBuffer: false,
   });
-  return null;
 }
 
-function Backdrop() {
-  const tex = useMemo(() => {
-    const c = document.createElement("canvas");
-    c.width = c.height = 512;
-    const g = c.getContext("2d")!;
-    const grad = g.createRadialGradient(256, 230, 20, 256, 256, 256);
-    grad.addColorStop(0, "rgba(30,95,112,0.85)");
-    grad.addColorStop(0.45, "rgba(12,48,62,0.6)");
-    grad.addColorStop(1, "rgba(5,13,19,0)");
-    g.fillStyle = grad;
-    g.fillRect(0, 0, 512, 512);
-    const t = new THREE.CanvasTexture(c);
-    t.colorSpace = THREE.SRGBColorSpace;
-    return t;
-  }, []);
-  useEffect(() => () => tex.dispose(), [tex]);
-  return (
-    <mesh position={[0.1, 1.4, -1.8]}>
-      <planeGeometry args={[7.5, 7.5]} />
-      <meshBasicMaterial map={tex} transparent depthWrite={false} toneMapped={false} />
-    </mesh>
-  );
+function double(size: number, type: THREE.TextureDataType, filter: THREE.MagnificationTextureFilter): Double {
+  const d: Double = {
+    read: target(size, type, filter),
+    write: target(size, type, filter),
+    swap() {
+      const t = d.read;
+      d.read = d.write;
+      d.write = t;
+    },
+  };
+  return d;
 }
+
+const clampMap = (v: number, a: number, b: number, c: number, d: number) =>
+  c + (d - c) * Math.min(1, Math.max(0, (v - a) / (b - a)));
 
 export default function Scene() {
-  return (
-    <Canvas
-      dpr={[1, 2]}
-      shadows="percentage"
-      camera={{ fov: 26, position: VIEWS.home.pos, near: 0.1, far: 30 }}
-      gl={{ antialias: true, powerPreference: "high-performance" }}
-      className="!absolute inset-0"
-    >
-      <color attach="background" args={["#040b10"]} />
-      <fog attach="fog" args={["#040b10", 5, 11]} />
-      <hemisphereLight args={["#3b6f7b", "#03080b", 0.16]} />
-      {/* Key: a cool white source from the front right that shades the body and casts its shadows. */}
-      <directionalLight
-        position={[2.1, 3.1, 3.0]}
-        intensity={2.2}
-        color="#eef8fa"
-        castShadow
-        shadow-mapSize={[2048, 2048]}
-        shadow-bias={-0.0004}
-        shadow-normalBias={0.02}
-        shadow-radius={3}
-        shadow-camera-left={-1.4}
-        shadow-camera-right={1.4}
-        shadow-camera-top={2.4}
-        shadow-camera-bottom={0.2}
-        shadow-camera-near={0.5}
-        shadow-camera-far={9}
-      />
-      {/* Fill from the left, low, so the shadow side keeps shape. */}
-      <directionalLight position={[-2.6, 1.3, 2.4]} intensity={0.5} color="#b9dbe3" />
-      {/* Two cyan rims from behind pick out the silhouette against the backdrop. */}
-      <pointLight position={[-1.7, 2.0, -1.5]} intensity={3.4} distance={7} color="#38c8d8" />
-      <pointLight position={[1.9, 1.7, -1.3]} intensity={2.6} distance={7} color="#2b9fb4" />
-      <Environment resolution={256} environmentIntensity={0.65}>
-        <Lightformer form="rect" intensity={1.1} color="#38c8d8" position={[-4, 3, -3]} scale={[6, 2, 1]} />
-        <Lightformer form="rect" intensity={1.4} color="#e8f6f9" position={[3.5, 4, 2.5]} scale={[5, 0.7, 1]} />
-        <Lightformer form="rect" intensity={0.9} color="#9ad9e6" position={[-3.5, 1.5, 3]} scale={[0.7, 4, 1]} />
-        <Lightformer form="rect" intensity={0.5} color="#9ad9e6" position={[4, 1, 2]} scale={[2, 3, 1]} />
-      </Environment>
-      <Backdrop />
-      <CameraRig />
-      <Suspense fallback={null}>
-        <Operator />
-      </Suspense>
-      <EffectComposer multisampling={4}>
-        <Bloom intensity={0.45} luminanceThreshold={0.9} luminanceSmoothing={0.2} mipmapBlur />
-        <ToneMapping mode={ToneMappingMode.NEUTRAL} />
-        <Sharpness sharpness={0.4} radius={1} />
-        <Noise opacity={0.03} />
-        <Vignette offset={0.25} darkness={0.85} />
-      </EffectComposer>
-    </Canvas>
-  );
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const setReady = useHud.getState().setReady;
+
+    let renderer: THREE.WebGLRenderer;
+    try {
+      renderer = new THREE.WebGLRenderer({ canvas, antialias: false, alpha: false, powerPreference: "high-performance" });
+    } catch {
+      setReady(true);
+      return;
+    }
+    const mobile = window.matchMedia("(max-width: 760px), (pointer: coarse)").matches;
+    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+    renderer.setPixelRatio(dpr);
+    renderer.setClearColor(0x000000, 1);
+    renderer.autoClear = false;
+
+    // ---- Fullscreen pass plumbing ----
+    const quadScene = new THREE.Scene();
+    const quadCamera = new THREE.Camera();
+    const quad = new THREE.Mesh(new THREE.PlaneGeometry(2, 2));
+    quad.frustumCulled = false;
+    quadScene.add(quad);
+    const materials: THREE.ShaderMaterial[] = [];
+    const pass = (fragmentShader: string, uniforms: Record<string, THREE.IUniform>) => {
+      const m = new THREE.ShaderMaterial({ vertexShader: QUAD_VERT, fragmentShader, uniforms, depthTest: false, depthWrite: false });
+      materials.push(m);
+      return m;
+    };
+    const run = (material: THREE.ShaderMaterial, out: THREE.WebGLRenderTarget) => {
+      quad.material = material;
+      renderer.setRenderTarget(out);
+      renderer.render(quadScene, quadCamera);
+    };
+
+    // ---- Fluid ----
+    const HF = THREE.HalfFloatType;
+    const simTexel = new THREE.Vector2(1 / FLUID.sim, 1 / FLUID.sim);
+    const dyeTexel = new THREE.Vector2(1 / FLUID.dye, 1 / FLUID.dye);
+    const velocity = double(FLUID.sim, HF, THREE.LinearFilter);
+    const density = double(FLUID.dye, HF, THREE.LinearFilter);
+    const pressure = double(FLUID.sim, HF, THREE.NearestFilter);
+    const curlRT = target(FLUID.sim, HF, THREE.NearestFilter);
+    const divergenceRT = target(FLUID.sim, HF, THREE.NearestFilter);
+
+    const splatMat = pass(SPLAT_FRAG, {
+      uTarget: { value: null },
+      uAspect: { value: 1 },
+      uColor: { value: new THREE.Vector3() },
+      uFrom: { value: new THREE.Vector2() },
+      uTo: { value: new THREE.Vector2() },
+      uRadius: { value: 0.01 },
+    });
+    const curlMat = pass(CURL_FRAG, { uVelocity: { value: null }, uTexel: { value: simTexel } });
+    const vorticityMat = pass(VORTICITY_FRAG, {
+      uVelocity: { value: null },
+      uCurl: { value: null },
+      uTexel: { value: simTexel },
+      uCurlStrength: { value: FLUID.curl },
+      uDt: { value: FLUID.dt },
+    });
+    const divergenceMat = pass(DIVERGENCE_FRAG, { uVelocity: { value: null }, uTexel: { value: simTexel } });
+    const clearMat = pass(CLEAR_FRAG, { uTexture: { value: null }, uValue: { value: FLUID.pressureDissipation } });
+    const pressureMat = pass(PRESSURE_FRAG, { uPressure: { value: null }, uDivergence: { value: null }, uTexel: { value: simTexel } });
+    const gradientMat = pass(GRADIENT_FRAG, { uPressure: { value: null }, uVelocity: { value: null }, uTexel: { value: simTexel } });
+    const advectMat = pass(ADVECT_FRAG, {
+      uVelocity: { value: null },
+      uSource: { value: null },
+      uTexel: { value: simTexel },
+      uDt: { value: FLUID.dt },
+      uDissipation: { value: 1 },
+    });
+
+    const stepFluid = () => {
+      curlMat.uniforms.uVelocity.value = velocity.read.texture;
+      run(curlMat, curlRT);
+
+      vorticityMat.uniforms.uVelocity.value = velocity.read.texture;
+      vorticityMat.uniforms.uCurl.value = curlRT.texture;
+      run(vorticityMat, velocity.write);
+      velocity.swap();
+
+      divergenceMat.uniforms.uVelocity.value = velocity.read.texture;
+      run(divergenceMat, divergenceRT);
+
+      clearMat.uniforms.uTexture.value = pressure.read.texture;
+      run(clearMat, pressure.write);
+      pressure.swap();
+
+      pressureMat.uniforms.uDivergence.value = divergenceRT.texture;
+      for (let i = 0; i < FLUID.pressureIterations; i++) {
+        pressureMat.uniforms.uPressure.value = pressure.read.texture;
+        run(pressureMat, pressure.write);
+        pressure.swap();
+      }
+
+      gradientMat.uniforms.uPressure.value = pressure.read.texture;
+      gradientMat.uniforms.uVelocity.value = velocity.read.texture;
+      run(gradientMat, velocity.write);
+      velocity.swap();
+
+      advectMat.uniforms.uTexel.value = simTexel;
+      advectMat.uniforms.uVelocity.value = velocity.read.texture;
+      advectMat.uniforms.uSource.value = velocity.read.texture;
+      advectMat.uniforms.uDissipation.value = FLUID.velocityDissipation;
+      run(advectMat, velocity.write);
+      velocity.swap();
+
+      advectMat.uniforms.uTexel.value = dyeTexel;
+      advectMat.uniforms.uVelocity.value = velocity.read.texture;
+      advectMat.uniforms.uSource.value = density.read.texture;
+      advectMat.uniforms.uDissipation.value = FLUID.densityDissipation;
+      run(advectMat, density.write);
+      density.swap();
+    };
+
+    // ---- Cursor ----
+    const mouse = { x: window.innerWidth / 2, y: window.innerHeight / 2, px: 0, py: 0, moved: false, seen: false, lastSplat: 0 };
+    const onPointer = (x: number, y: number) => {
+      if (!mouse.seen) {
+        mouse.px = x;
+        mouse.py = y;
+        mouse.seen = true;
+      }
+      mouse.x = x;
+      mouse.y = y;
+      mouse.moved = true;
+    };
+    const onMove = (e: PointerEvent) => onPointer(e.clientX, e.clientY);
+    const onTouch = (e: TouchEvent) => {
+      const t = e.touches[0];
+      if (t) onPointer(t.clientX, t.clientY);
+    };
+    window.addEventListener("pointermove", onMove);
+    window.addEventListener("touchstart", onTouch, { passive: true });
+    window.addEventListener("touchmove", onTouch, { passive: true });
+
+    const splat = (now: number) => {
+      const w = window.innerWidth;
+      const h = window.innerHeight;
+      const dx = mouse.x - mouse.px;
+      const dy = mouse.y - mouse.py;
+      const len = Math.hypot(dx, dy);
+      if (mouse.moved && len > 0.01) {
+        const radius = clampMap(len, 0, 5, 0, 60) * 0.6 * (mobile ? 0.8 : 1);
+        const mult = clampMap(len, 0, 15, 0, 10);
+        const fresh = now - mouse.lastSplat > 50;
+        const fromX = fresh ? mouse.x : mouse.px;
+        const fromY = fresh ? mouse.y : mouse.py;
+        splatMat.uniforms.uAspect.value = w / h;
+        splatMat.uniforms.uFrom.value.set(fromX / w, 1 - fromY / h);
+        splatMat.uniforms.uTo.value.set(mouse.x / w, 1 - mouse.y / h);
+        splatMat.uniforms.uRadius.value = radius / 200 / 2.2;
+
+        splatMat.uniforms.uTarget.value = velocity.read.texture;
+        splatMat.uniforms.uColor.value.set(dx * mult, -dy * mult, 1);
+        run(splatMat, velocity.write);
+        velocity.swap();
+
+        splatMat.uniforms.uTarget.value = density.read.texture;
+        splatMat.uniforms.uColor.value.set(1, 1, 1);
+        run(splatMat, density.write);
+        density.swap();
+        mouse.lastSplat = now;
+      }
+      mouse.px = mouse.x;
+      mouse.py = mouse.y;
+      mouse.moved = false;
+    };
+
+    // ---- Particles ----
+    const side = mobile ? 128 : 512;
+    const count = side * side;
+    const originData = new Float32Array(count * 4);
+    for (let i = 0; i < count; i++) {
+      originData[i * 4] = Math.random() * 2 - 1;
+      originData[i * 4 + 1] = Math.random() * 2 - 1;
+      originData[i * 4 + 2] = Math.random() * 2 - 1;
+      originData[i * 4 + 3] = 1;
+    }
+    const originTex = new THREE.DataTexture(originData, side, side, THREE.RGBAFormat, THREE.FloatType);
+    originTex.needsUpdate = true;
+    const positions = double(side, THREE.FloatType, THREE.NearestFilter);
+
+    const copyMat = pass(CLEAR_FRAG, { uTexture: { value: originTex }, uValue: { value: 1 } });
+    run(copyMat, positions.read);
+
+    const simMat = pass(SIM_FRAG, {
+      uPositions: { value: null },
+      uOrigin: { value: originTex },
+      uHome: { value: originTex },
+      uHomeStrength: { value: 0 },
+      uFluidVelocity: { value: null },
+      uFluidDensity: { value: null },
+      uViewProjection: { value: new THREE.Matrix4() },
+      uModel: { value: new THREE.Matrix4() },
+      uFlowBasis: { value: new THREE.Matrix3() },
+      uTime: { value: 0 },
+      uHz: { value: 1 },
+      uMouseStrength: { value: 0.4 },
+    });
+
+    // Resting places: let the cloud settle once, untouched, and keep the result. The live
+    // simulation still starts from the random positions, so the form gathers on screen.
+    const home = double(side, THREE.FloatType, THREE.NearestFilter);
+    run(copyMat, home.read);
+    simMat.uniforms.uMouseStrength.value = 0;
+    simMat.uniforms.uFluidVelocity.value = velocity.read.texture;
+    simMat.uniforms.uFluidDensity.value = density.read.texture;
+    for (let i = 0; i < 90; i++) {
+      simMat.uniforms.uPositions.value = home.read.texture;
+      run(simMat, home.write);
+      home.swap();
+    }
+    simMat.uniforms.uHome.value = home.read.texture;
+    simMat.uniforms.uHomeStrength.value = 0.045;
+    simMat.uniforms.uMouseStrength.value = 0.4;
+
+    const geometry = new THREE.BufferGeometry();
+    const uvs = new Float32Array(count * 3);
+    const randoms = new Float32Array(count * 4);
+    for (let i = 0; i < count; i++) {
+      uvs[i * 3] = ((i % side) + 0.5) / side;
+      uvs[i * 3 + 1] = (Math.floor(i / side) + 0.5) / side;
+      randoms[i * 4] = Math.random();
+      randoms[i * 4 + 1] = Math.random();
+      randoms[i * 4 + 2] = Math.random();
+      randoms[i * 4 + 3] = Math.random();
+    }
+    geometry.setAttribute("position", new THREE.BufferAttribute(uvs, 3));
+    geometry.setAttribute("random", new THREE.BufferAttribute(randoms, 4));
+
+    const pointsMat = new THREE.ShaderMaterial({
+      vertexShader: POINTS_VERT,
+      fragmentShader: POINTS_FRAG,
+      uniforms: { uPositions: { value: null }, uTime: { value: 0 }, uDpr: { value: dpr }, uGain: { value: 1 } },
+      blending: THREE.AdditiveBlending,
+      transparent: true,
+      depthTest: true,
+      depthWrite: false,
+    });
+    const points = new THREE.Points(geometry, pointsMat);
+    points.frustumCulled = false;
+
+    const scene = new THREE.Scene();
+    const group = new THREE.Group();
+    const deg = THREE.MathUtils.degToRad;
+    group.position.set(0.343 + SHIFT_HOME, 0.38, -1);
+    group.rotation.set(deg(-28.4), deg(390), deg(4.92));
+    group.scale.set(SCALE_HOME, SCALE_HOME, SCALE_HOME * 1.2);
+    group.add(points);
+    scene.add(group);
+
+    const camera = new THREE.PerspectiveCamera(30, 1, 0.1, 1000);
+    const basePos = new THREE.Vector3(-1.17, 0, 6);
+    camera.position.copy(basePos);
+    camera.lookAt(0, 0, 0);
+
+    const resize = () => {
+      renderer.setSize(window.innerWidth, window.innerHeight, false);
+      camera.aspect = window.innerWidth / window.innerHeight;
+      camera.updateProjectionMatrix();
+    };
+    resize();
+    window.addEventListener("resize", resize);
+
+    // ---- Frame loop ----
+    const camTarget = new THREE.Vector3();
+    const camRot = new THREE.Matrix4();
+    const groupRotInv = new THREE.Matrix4();
+    const flowBasis4 = new THREE.Matrix4();
+    const v = new THREE.Vector3();
+    let shift = SHIFT_HOME;
+    let gain = 0.75;
+    let size = SCALE_HOME;
+    let frames = 0;
+    let last = performance.now();
+    let raf = 0;
+    const t0 = last;
+
+    const frame = (now: number) => {
+      raf = requestAnimationFrame(frame);
+      const dt = Math.min((now - last) / 1000, 0.05);
+      last = now;
+      const time = (now - t0) / 1000;
+      const w = window.innerWidth;
+      const h = window.innerHeight;
+      const active = useHud.getState().active;
+
+      // Gaze: the camera leans a little with the cursor.
+      const mx = (mouse.x / w) * 2 - 1;
+      const my = (mouse.y / h) * 2 - 1;
+      camTarget.set(basePos.x - mx * 0.4, basePos.y + my * 0.7, basePos.z);
+      camera.position.lerp(camTarget, 0.05);
+      camera.lookAt(0, 0, 0);
+
+      // Slide left and dim when a section is open.
+      const k = 1 - Math.exp(-dt * 3.2);
+      shift += ((active ? SHIFT_SECTION : SHIFT_HOME) - shift) * k;
+      gain += ((active ? 0.5 : 0.75) - gain) * k;
+      size += ((active ? SCALE_SECTION : SCALE_HOME) - size) * k;
+      group.position.x = 0.343 + shift;
+      group.scale.set(size, size, size * 1.2);
+      scene.updateMatrixWorld();
+      camera.updateMatrixWorld();
+
+      splat(now);
+      stepFluid();
+
+      camRot.extractRotation(camera.matrixWorld);
+      groupRotInv.extractRotation(group.matrixWorld).invert();
+      flowBasis4.multiplyMatrices(groupRotInv, camRot);
+      simMat.uniforms.uFlowBasis.value.setFromMatrix4(flowBasis4);
+      simMat.uniforms.uViewProjection.value.multiplyMatrices(camera.projectionMatrix, camera.matrixWorldInverse);
+      simMat.uniforms.uModel.value.copy(group.matrixWorld);
+      simMat.uniforms.uPositions.value = positions.read.texture;
+      simMat.uniforms.uFluidVelocity.value = velocity.read.texture;
+      simMat.uniforms.uFluidDensity.value = density.read.texture;
+      simMat.uniforms.uTime.value = time;
+      simMat.uniforms.uHz.value = dt * 60;
+      run(simMat, positions.write);
+      positions.swap();
+
+      pointsMat.uniforms.uPositions.value = positions.read.texture;
+      pointsMat.uniforms.uTime.value = time;
+      pointsMat.uniforms.uGain.value = gain;
+      renderer.setRenderTarget(null);
+      renderer.clear();
+      renderer.render(scene, camera);
+
+      // Screen positions of the ring anchors, for the landing leader lines.
+      (Object.keys(ANCHOR_LOCAL) as SectionId[]).forEach((id) => {
+        v.set(...ANCHOR_LOCAL[id]).applyMatrix4(group.matrixWorld).project(camera);
+        const a = anchors[id];
+        a.x = (v.x * 0.5 + 0.5) * w;
+        a.y = (-v.y * 0.5 + 0.5) * h;
+        a.visible = v.z < 1;
+      });
+
+      if (frames < 40 && ++frames === 40) setReady(true);
+    };
+    raf = requestAnimationFrame(frame);
+
+    return () => {
+      cancelAnimationFrame(raf);
+      window.removeEventListener("pointermove", onMove);
+      window.removeEventListener("touchstart", onTouch);
+      window.removeEventListener("touchmove", onTouch);
+      window.removeEventListener("resize", resize);
+      [velocity, density, pressure, positions, home].forEach((d) => {
+        d.read.dispose();
+        d.write.dispose();
+      });
+      curlRT.dispose();
+      divergenceRT.dispose();
+      originTex.dispose();
+      materials.forEach((m) => m.dispose());
+      pointsMat.dispose();
+      geometry.dispose();
+      quad.geometry.dispose();
+      renderer.dispose();
+    };
+  }, []);
+
+  return <canvas ref={canvasRef} className="absolute inset-0 h-full w-full" aria-hidden="true" />;
 }

@@ -138,7 +138,7 @@ export default function Subscreen() {
           best = Math.abs(r.left - wr.left);
           nearest = i;
         }
-        // Cards leaving to the left fade out fully so they never ghost over the operator.
+        // Cards leaving to the left fade out fully so they never ghost over the particle cloud.
         el.style.opacity = String(d < 0 ? Math.min(1, Math.max(0, 1 - Math.max(0, ad - 0.22) * 2.6)) : Math.max(0.35, 1 - Math.max(0, ad - 0.28) * 1.1));
         el.style.transform = `translate3d(0, ${Math.min(ad, 1) * 16}px, 0) scale(${1 - Math.min(ad, 1) * 0.045})`;
       });
@@ -348,8 +348,8 @@ export default function Subscreen() {
 
   return (
     <div ref={rootRef} className="absolute inset-0 z-20" role="region" aria-label={section.label}>
-      {/* Darken the right side so cards read; leave the operator visible on the left. */}
-      <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(to_right,transparent_22%,rgb(5_13_19/0.74)_38%,rgb(5_13_19/0.9)_100%)]" />
+      {/* Darken the right side so cards read; leave the particle cloud visible on the left. */}
+      <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(to_right,transparent_22%,rgb(0_0_0/0.74)_38%,rgb(0_0_0/0.9)_100%)]" />
 
       {/* Back + tabs */}
       <div className="absolute inset-x-[5vw] top-[7vh] flex items-center justify-between">
