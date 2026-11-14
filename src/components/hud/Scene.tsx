@@ -21,10 +21,10 @@ const FLUID = {
 
 // Where the cloud sits. On the landing it is centred between the callouts; inside a
 // section it slides to the left third so the card rail has the rest of the screen.
-const SHIFT_HOME = -0.5;
-const SHIFT_SECTION = -2.5;
-const SCALE_HOME = 3.1;
-const SCALE_SECTION = 2.05;
+const SHIFT_HOME = -0.42;
+const SHIFT_SECTION = -2.3;
+const SCALE_HOME = 5;
+const SCALE_SECTION = 4.4;
 
 // Points on the ring, in the cloud's own space, that the landing leader lines attach to.
 const ANCHOR_LOCAL: Record<SectionId, [number, number, number]> = {
@@ -231,12 +231,16 @@ const SIM_FRAG = /* glsl */ `
     vec3 origin = texture2D(uOrigin, vUv).xyz;
 
     if (length(pos) > 0.7) pos /= 2.0;
-    pos += curlNoise(pos * 0.1 + uTime * 0.05) * 0.0002 * uHz;
+    pos += curlNoise(pos * 0.1 + uTime * 0.05) * 0.0005 * uHz;
 
     vec3 gradient = sdfNormal(pos);
     float sdf = sdfShape(pos);
     pos += cross(normalize(pos + 1e-5), normalize(gradient + 1e-5)) * 0.0005;
-    pos += -gradient * sdf * 0.5;
+    // Each particle rides its own height above the surface: most sit on it, a few drift
+    // well clear, so the form reads as a loose field of stars and not a solid skin.
+    float h = fract(sin(dot(origin, vec3(12.9898, 78.233, 37.719))) * 43758.5453);
+    float ride = h * h * h * 0.05 - 0.004;
+    pos += -gradient * (sdf - ride) * 0.5;
     pos += (origin - pos) * 0.0002 * uHz;
 
     vec4 clip = uViewProjection * uModel * vec4(pos, 1.0);
@@ -250,7 +254,7 @@ const SIM_FRAG = /* glsl */ `
     // Heal: a particle that the cursor has carried off is drawn back to its resting
     // place on the surface. Close to home it is left alone, so the slow swirl carries on.
     vec3 away = texture2D(uHome, vUv).xyz - pos;
-    pos += away * uHomeStrength * smoothstep(0.03, 0.14, length(away)) * min(uHz, 2.0);
+    pos += away * uHomeStrength * smoothstep(0.05, 0.2, length(away)) * min(uHz, 2.0);
 
     gl_FragColor = vec4(pos, 1.0);
   }
@@ -292,8 +296,10 @@ const POINTS_FRAG = /* glsl */ `
     vec2 uv = gl_PointCoord - 0.5;
     if (dot(uv, uv) > 0.25 || vScale < 0.1) discard;
 
-    vec3 color = vec3(mix(0.0, 0.2, vRandom.x));
-    color = mix(color, vec3(0.6, 0.45, 1.0), pow(vRandom.z, 100.0));
+    // Most points are faint and a few are bright, like a star field.
+    float mag = 0.25 + 0.75 * pow(vRandom.w, 4.0);
+    vec3 color = vec3(mix(0.0, 0.2, vRandom.x)) * mag;
+    color = mix(color, vec3(0.25, 0.8, 0.55), pow(vRandom.z, 100.0));
     color *= 0.5 + (0.4 + sin(uTime * 4.0 + vRandom.y * 20.0)) * pow(vRandom.z, 10.0) * 2.5;
 
     // Soft sphere shading, in place of a matcap texture: lit from the upper left,
@@ -594,7 +600,7 @@ export default function Scene() {
     const scene = new THREE.Scene();
     const group = new THREE.Group();
     const deg = THREE.MathUtils.degToRad;
-    group.position.set(0.343 + SHIFT_HOME, 0.38, -1);
+    group.position.set(0.343 + SHIFT_HOME, 0.2, -1);
     group.rotation.set(deg(-28.4), deg(390), deg(4.92));
     group.scale.set(SCALE_HOME, SCALE_HOME, SCALE_HOME * 1.2);
     group.add(points);
@@ -620,7 +626,7 @@ export default function Scene() {
     const flowBasis4 = new THREE.Matrix4();
     const v = new THREE.Vector3();
     let shift = SHIFT_HOME;
-    let gain = 0.75;
+    let gain = 0.85;
     let size = SCALE_HOME;
     let frames = 0;
     let last = performance.now();
@@ -646,7 +652,7 @@ export default function Scene() {
       // Slide left and dim when a section is open.
       const k = 1 - Math.exp(-dt * 3.2);
       shift += ((active ? SHIFT_SECTION : SHIFT_HOME) - shift) * k;
-      gain += ((active ? 0.5 : 0.75) - gain) * k;
+      gain += ((active ? 0.5 : 0.85) - gain) * k;
       size += ((active ? SCALE_SECTION : SCALE_HOME) - size) * k;
       group.position.x = 0.343 + shift;
       group.scale.set(size, size, size * 1.2);

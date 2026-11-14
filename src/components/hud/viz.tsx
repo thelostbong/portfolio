@@ -453,7 +453,7 @@ function HeartbeatViz() {
           <rect x="22" y="32" width="226" height="118" />
         </clipPath>
         <pattern id="hb-grid" width="20" height="20" patternUnits="userSpaceOnUse">
-          <path d="M20,0 H0 V20" fill="none" stroke="rgb(170 136 255 / .12)" strokeWidth="1" />
+          <path d="M20,0 H0 V20" fill="none" stroke="rgb(52 192 138 / .12)" strokeWidth="1" />
         </pattern>
       </defs>
       <rect x="20" y="30" width="230" height="122" className="vz-fb" />
@@ -482,7 +482,7 @@ function HeartbeatViz() {
           <text x="290" y={(y as number) + 7} className="vz-t" style={{ fontSize: 9 }}>{n as string}</text>
           <rect x="346" y={y as number} width={w as number} height="8" className="vz-fillc" opacity="0.75" />
           {(extra as number) > 0 && (
-            <rect x={346 + (w as number)} y={y as number} width={extra as number} height="8" className="vz-s hb-grow" strokeDasharray="3 2" style={{ fill: "rgb(170 136 255 / .22)" }} />
+            <rect x={346 + (w as number)} y={y as number} width={extra as number} height="8" className="vz-s hb-grow" strokeDasharray="3 2" style={{ fill: "rgb(52 192 138 / .22)" }} />
           )}
         </g>
       ))}

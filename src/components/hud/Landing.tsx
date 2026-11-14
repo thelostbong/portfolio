@@ -43,7 +43,7 @@ function TerrainMap() {
     const g = c.getContext("2d");
     if (!g) return;
     g.scale(dpr, dpr);
-    g.strokeStyle = "rgba(170,136,255,0.75)";
+    g.strokeStyle = "rgba(52,192,138,0.75)";
     g.lineWidth = 1;
     const cols = 22;
     const rows = 12;
@@ -141,7 +141,7 @@ export default function Landing() {
         {/* Leader lines from labels to anchors on the particle ring */}
         <g fill="none" strokeWidth="1">
           {CALLOUTS.map((c) => (
-            <g key={c.id} style={{ color: hover === c.id ? "#dddddd" : "#aa88ff" }}>
+            <g key={c.id} style={{ color: hover === c.id ? "#dddddd" : "#34c08a" }}>
               <path
                 ref={(el) => {
                   pathRefs.current[c.id] = el;
@@ -185,7 +185,7 @@ export default function Landing() {
               onPointerLeave={() => setHover(null)}
               onFocus={() => setHover(c.id)}
               onBlur={() => setHover(null)}
-              className={`group absolute z-10 w-[250px] text-left transition-transform duration-300 ${c.side === "left" ? "left-[8vw]" : "right-[8vw] text-right"} ${isHover ? (c.side === "left" ? "translate-x-1" : "-translate-x-1") : ""}`}
+              className={`text-pool group absolute z-10 w-[250px] text-left transition-transform duration-300 ${c.side === "left" ? "left-[8vw]" : "right-[8vw] text-right"} ${isHover ? (c.side === "left" ? "translate-x-1" : "-translate-x-1") : ""}`}
               style={{ top: c.top }}
             >
               <span className={`block font-display text-[34px] font-bold uppercase leading-none tracking-wide transition-colors ${isHover ? "text-cyan" : "text-bone"}`}>
@@ -199,7 +199,7 @@ export default function Landing() {
       </nav>
 
       {/* Bottom left: status */}
-      <div className="absolute bottom-[10vh] left-[7vw] w-[340px]">
+      <div className="text-pool absolute bottom-[10vh] left-[7vw] w-[340px]">
         <span className="chip chip-alert inline-flex items-center gap-2 !px-3 !py-1 !text-[12px]">
           <span className="h-2 w-2 rounded-full bg-white" style={{ animation: "pulse-dot 1.6s infinite" }} />
           Status
@@ -239,7 +239,7 @@ export default function Landing() {
 
       {/* Scroll hint */}
       <div className="pointer-events-none absolute inset-x-0 bottom-[10vh] flex flex-col items-center gap-1">
-        <span className="font-display text-[clamp(17px,1.35vw,22px)] font-bold uppercase tracking-[0.34em] text-[#e3d8ff] [text-shadow:0_0_18px_rgb(170_136_255/0.8)]">
+        <span className="font-display text-[clamp(17px,1.35vw,22px)] font-bold uppercase tracking-[0.34em] text-[#d6f2e6] [text-shadow:0_1px_10px_#000]">
           Scroll to explore
         </span>
         <span aria-hidden="true" className="scroll-chevrons flex flex-col items-center">

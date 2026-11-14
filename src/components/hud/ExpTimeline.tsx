@@ -166,7 +166,7 @@ const ExpTimeline = forwardRef<ExpTimelineHandle>(function ExpTimeline(_, ref) {
         <>
           <svg width={model.w} height={model.h} className="absolute inset-0" role="img" aria-label={`Career line, ${model.total} months of work, newest role first`}>
             <line x1="0" x2={model.w} y1={model.yBase} y2={model.yBase} stroke="rgb(138 138 138 / 0.16)" strokeDasharray="2 6" />
-            <path d={model.line} fill="none" stroke="rgb(170 136 255 / 0.16)" strokeWidth="2" strokeLinejoin="round" />
+            <path d={model.line} fill="none" stroke="rgb(52 192 138 / 0.16)" strokeWidth="2" strokeLinejoin="round" />
             <path
               ref={lineRef}
               d={model.line}
@@ -177,7 +177,6 @@ const ExpTimeline = forwardRef<ExpTimelineHandle>(function ExpTimeline(_, ref) {
               strokeLinecap="round"
               strokeDasharray={model.L}
               strokeDashoffset={model.L}
-              style={{ filter: "drop-shadow(0 0 5px rgb(170 136 255 / .6))" }}
             />
 
             {model.pts.map((q, k) => {
@@ -199,7 +198,7 @@ const ExpTimeline = forwardRef<ExpTimelineHandle>(function ExpTimeline(_, ref) {
             ))}
 
             <g ref={tipRef}>
-              <circle r="9" fill="rgb(170 136 255 / 0.18)" className="exp-pulse" />
+              <circle r="9" fill="rgb(52 192 138 / 0.18)" className="exp-pulse" />
               <circle r="4.5" fill="var(--color-cyan)" />
             </g>
           </svg>
