@@ -122,12 +122,12 @@ export default function Landing() {
         dot.setAttribute("cx", String(a.x));
         dot.setAttribute("cy", String(a.y));
       }
-      // Tell the particle scene where the name sits, with some breathing room around it.
+      // Tell the particle scene where the name sits, so it can dim the stars behind it.
       const hero = heroRef.current;
       if (hero) {
         const r = hero.getBoundingClientRect();
-        const padX = r.width * 0.16;
-        const padY = r.height * 0.2;
+        const padX = r.width * 0.3;
+        const padY = r.height * 1.1;
         clearZone.x = r.left - padX;
         clearZone.y = r.top - padY;
         clearZone.w = r.width + padX * 2;
@@ -140,6 +140,7 @@ export default function Landing() {
     return () => {
       cancelAnimationFrame(raf);
       clearZone.on = false;
+      clearZone.el = null;
     };
   }, []);
 
@@ -240,20 +241,18 @@ export default function Landing() {
         </div>
       </div>
 
-      {/* Hero: the name, in a clearing the stars keep open */}
+      {/* Name, centred. Its letters shed particles into the star field (see Scene). */}
       <div className="pointer-events-none absolute inset-x-0 top-[47%] flex -translate-y-1/2 justify-center">
         <div ref={heroRef} className="hero-in flex flex-col items-center text-center">
           <h1
-            aria-label={profile.name}
-            className="font-display text-[min(7.4vw,15vh)] font-bold uppercase leading-[0.88] tracking-[0.01em] text-white"
+            ref={(el) => {
+              clearZone.el = el;
+            }}
+            className="whitespace-nowrap font-display text-[clamp(24px,2.1vw,38px)] font-bold uppercase leading-none tracking-[0.12em] text-white"
           >
-            {profile.name.split(" ").map((part) => (
-              <span key={part} aria-hidden="true" className="block">
-                {part}
-              </span>
-            ))}
+            {profile.name}
           </h1>
-          <p className="mt-[2.4vh] font-display text-[clamp(17px,1.55vw,24px)] font-semibold uppercase tracking-[0.16em] text-cyan">
+          <p className="mt-3 font-display text-[clamp(13px,1.15vw,18px)] font-semibold uppercase tracking-[0.2em] text-cyan">
             {TAGLINE}
           </p>
         </div>

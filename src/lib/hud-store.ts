@@ -54,8 +54,9 @@ export const anchors: Record<SectionId, Anchor> = {
   education: { x: 0, y: 0, visible: false },
 };
 
-// Screen rectangle (px) of the landing name block. The particle scene keeps it clear of stars.
-export const clearZone = { x: 0, y: 0, w: 0, h: 0, on: false };
+// Screen rectangle (px) of the landing name block. The particle scene dims the stars a little
+// behind it, and sheds particles from the edges of the name's letters (el is the heading).
+export const clearZone = { x: 0, y: 0, w: 0, h: 0, on: false, el: null as HTMLElement | null };
 
 // Pointer position, -1..1, y up. Written by the overlay, read by the scene.
 export const pointer = { x: 0, y: 0 };

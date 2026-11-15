@@ -28,10 +28,10 @@ const SCALE_SECTION = 4.4;
 
 // Points on the ring, in the cloud's own space, that the landing leader lines attach to.
 const ANCHOR_LOCAL: Record<SectionId, [number, number, number]> = {
-  projects: [-0.25, 0.2, 0.02],
-  experience: [-0.41, -0.03, 0.02],
-  education: [0.27, 0.25, 0.02],
-  skills: [0.45, -0.1, 0.02],
+  projects: [-0.2, 0.17, 0.02],
+  experience: [-0.27, -0.03, 0.02],
+  education: [0.19, 0.19, 0.02],
+  skills: [0.27, -0.05, 0.02],
 };
 
 const QUAD_VERT = /* glsl */ `
@@ -200,9 +200,6 @@ const SIM_FRAG = /* glsl */ `
   uniform sampler2D uOrigin;
   uniform sampler2D uHome;
   uniform float uHomeStrength;
-  uniform vec4 uClear; // centre.xy, half size.xy, in screen UV
-  uniform float uClearAmt;
-  uniform float uAspect;
   uniform sampler2D uFluidVelocity;
   uniform sampler2D uFluidDensity;
   uniform mat4 uViewProjection;
@@ -256,16 +253,8 @@ const SIM_FRAG = /* glsl */ `
 
     // Heal: a particle that the cursor has carried off is drawn back to its resting
     // place on the surface. Close to home it is left alone, so the slow swirl carries on.
-    // Clearing: stars inside the name's rectangle are eased out to its rim, so the
-    // field parts around the name. Home is switched off in there or it would fight back.
-    vec2 cd = (screenUv - uClear.xy) / uClear.zw;
-    float cl = pow(pow(abs(cd.x), 4.0) + pow(abs(cd.y), 4.0), 0.25);
-    float inside = uClearAmt * (1.0 - smoothstep(0.7, 1.55, cl));
-    vec2 outward = normalize(vec2(cd.x * uClear.z * uAspect, cd.y * uClear.w) + 1e-5);
-    pos += uFlowBasis * vec3(outward, 0.0) * 0.009 * inside * min(uHz, 2.0);
-
     vec3 away = texture2D(uHome, vUv).xyz - pos;
-    pos += away * uHomeStrength * (1.0 - inside) * smoothstep(0.05, 0.2, length(away)) * min(uHz, 2.0);
+    pos += away * uHomeStrength * smoothstep(0.05, 0.2, length(away)) * min(uHz, 2.0);
 
     gl_FragColor = vec4(pos, 1.0);
   }
@@ -289,10 +278,10 @@ const POINTS_VERT = /* glsl */ `
     vScale = smoothstep(3.0, 15.0, dist) * mix(0.5, 1.0, random.z);
     gl_PointSize = 0.04 * uDpr * 2.0 * vScale * (1000.0 / dist);
     gl_Position = projectionMatrix * mv;
-    // Whatever still crosses the name's rectangle is dimmed to a faint trace.
+    // The stars behind the name are dimmed a little, so the letters stay easy to read.
     vec2 cd = (gl_Position.xy / gl_Position.w * 0.5 + 0.5 - uClear.xy) / uClear.zw;
     float cl = pow(pow(abs(cd.x), 4.0) + pow(abs(cd.y), 4.0), 0.25);
-    vFade = 1.0 - uClearAmt * 0.94 * (1.0 - smoothstep(0.85, 1.5, cl));
+    vFade = 1.0 - uClearAmt * 0.6 * (1.0 - smoothstep(0.5, 1.6, cl));
   }
 `;
 
@@ -334,6 +323,64 @@ const POINTS_FRAG = /* glsl */ `
     color = mix(color, over, 0.2);
 
     gl_FragColor = vec4(color * uGain * vFade, 1.0);
+  }
+`;
+
+const NAME_VERT = /* glsl */ `
+  attribute vec2 normal2;
+  attribute vec4 seed;
+  uniform vec4 uRect; // heading rectangle in px: x, y, w, h
+  uniform vec2 uViewport;
+  uniform sampler2D uFluidVelocity;
+  uniform float uTime;
+  uniform float uDpr;
+  varying float vLife;
+  varying vec4 vSeed;
+
+  vec2 drift(vec2 p, float t) {
+    // Divergence-free swirl, so the shed particles curl like the star field does.
+    float a = sin(p.y * 0.021 + t * 0.6) + sin((p.x + p.y) * 0.013 - t * 0.4);
+    float b = sin(p.x * 0.019 - t * 0.5) + sin((p.x - p.y) * 0.015 + t * 0.3);
+    return vec2(a, -b);
+  }
+
+  void main() {
+    vSeed = seed;
+    // Most particles hug the outline; a share of them travel.
+    float speed = mix(0.07, 0.22, seed.x);
+    float life = fract(uTime * speed + seed.y);
+    float reach = mix(0.3, 1.0, pow(seed.z, 1.6));
+    float t = life * reach;
+    vLife = life;
+
+    vec2 home = uRect.xy + position.xy * uRect.zw;
+    vec2 uv = vec2(home.x / uViewport.x, 1.0 - home.y / uViewport.y);
+    vec2 flow = texture2D(uFluidVelocity, uv).xy;
+    flow *= min(1.0, 60.0 / (length(flow) + 1e-4));
+
+    vec2 p = home;
+    p += normal2 * (0.6 + t * 8.0);
+    p += drift(home + seed.xy * 40.0, uTime) * t * t * 46.0;
+    p += vec2(0.0, -1.0) * t * t * 10.0;
+    p += vec2(flow.x, -flow.y) * t * 0.6;
+
+    gl_Position = vec4(p.x / uViewport.x * 2.0 - 1.0, 1.0 - p.y / uViewport.y * 2.0, 0.0, 1.0);
+    gl_PointSize = uDpr * mix(1.0, 1.9, seed.w) * (1.0 - 0.35 * t);
+  }
+`;
+
+const NAME_FRAG = /* glsl */ `
+  precision highp float;
+  uniform float uAlpha;
+  varying float vLife;
+  varying vec4 vSeed;
+  void main() {
+    vec2 uv = gl_PointCoord - 0.5;
+    if (dot(uv, uv) > 0.25) discard;
+    // Faint on the outline, so the letters stay crisp; brightest just after leaving it.
+    float fade = smoothstep(0.0, 0.22, vLife) * pow(1.0 - vLife, 1.3);
+    vec3 color = mix(vec3(0.82), vec3(0.3, 0.85, 0.6), step(0.9, vSeed.w));
+    gl_FragColor = vec4(color * fade * uAlpha * mix(0.3, 0.8, vSeed.z), 1.0);
   }
 `;
 
@@ -564,9 +611,6 @@ export default function Scene() {
       uOrigin: { value: originTex },
       uHome: { value: originTex },
       uHomeStrength: { value: 0 },
-      uClear: { value: new THREE.Vector4(0.5, 0.5, 0.2, 0.2) },
-      uClearAmt: { value: 0 },
-      uAspect: { value: 1 },
       uFluidVelocity: { value: null },
       uFluidDensity: { value: null },
       uViewProjection: { value: new THREE.Matrix4() },
@@ -615,7 +659,7 @@ export default function Scene() {
         uTime: { value: 0 },
         uDpr: { value: dpr },
         uGain: { value: 1 },
-        uClear: { value: simMat.uniforms.uClear.value },
+        uClear: { value: new THREE.Vector4(0.5, 0.5, 0.2, 0.2) },
         uClearAmt: { value: 0 },
       },
       blending: THREE.AdditiveBlending,
@@ -634,6 +678,99 @@ export default function Scene() {
     group.scale.set(SCALE_HOME, SCALE_HOME, SCALE_HOME * 1.2);
     group.add(points);
     scene.add(group);
+
+    // ---- Letter particles ----
+    // Points seeded on the outlines of the name's letters. Each one peels off its edge,
+    // rides the same flow the cursor stirs, fades, and starts again on the edge.
+    const nameMat = new THREE.ShaderMaterial({
+      vertexShader: NAME_VERT,
+      fragmentShader: NAME_FRAG,
+      uniforms: {
+        uRect: { value: new THREE.Vector4() },
+        uViewport: { value: new THREE.Vector2(1, 1) },
+        uFluidVelocity: { value: null },
+        uTime: { value: 0 },
+        uAlpha: { value: 0 },
+        uDpr: { value: dpr },
+      },
+      blending: THREE.AdditiveBlending,
+      transparent: true,
+      depthTest: false,
+      depthWrite: false,
+    });
+    const nameGeometry = new THREE.BufferGeometry();
+    const namePoints = new THREE.Points(nameGeometry, nameMat);
+    namePoints.frustumCulled = false;
+    const nameScene = new THREE.Scene();
+    nameScene.add(namePoints);
+    let nameReady = false;
+    let disposed = false;
+
+    const seedName = () => {
+      const el = clearZone.el;
+      if (!el || disposed) return;
+      const r = el.getBoundingClientRect();
+      if (r.width < 4 || r.height < 4) return;
+      const cs = getComputedStyle(el);
+      const ss = 3; // supersample so edges and their normals are clean
+      const cw = Math.ceil(r.width * ss);
+      const ch = Math.ceil(r.height * ss);
+      const c = document.createElement("canvas");
+      c.width = cw;
+      c.height = ch;
+      const ctx = c.getContext("2d", { willReadFrequently: true });
+      if (!ctx) return;
+      ctx.scale(ss, ss);
+      ctx.font = `${cs.fontWeight} ${cs.fontSize} ${cs.fontFamily}`;
+      (ctx as CanvasRenderingContext2D & { letterSpacing?: string }).letterSpacing = cs.letterSpacing;
+      ctx.textBaseline = "middle";
+      ctx.fillStyle = "#fff";
+      const text = (el.textContent || "").toUpperCase();
+      const tw = ctx.measureText(text).width;
+      ctx.fillText(text, (r.width - tw) / 2 + parseFloat(cs.letterSpacing || "0") / 2, r.height / 2 + 1);
+      const data = ctx.getImageData(0, 0, cw, ch).data;
+      const alpha = (x: number, y: number) => (x < 0 || y < 0 || x >= cw || y >= ch ? 0 : data[(y * cw + x) * 4 + 3]);
+      const edges: number[] = [];
+      for (let y = 0; y < ch; y++) {
+        for (let x = 0; x < cw; x++) {
+          if (alpha(x, y) < 128) continue;
+          const gx = alpha(x - 2, y) - alpha(x + 2, y);
+          const gy = alpha(x, y - 2) - alpha(x, y + 2);
+          const g = Math.hypot(gx, gy);
+          if (g < 60) continue; // interior pixel
+          edges.push(x / cw, y / ch, gx / g, gy / g);
+        }
+      }
+      if (edges.length === 0) return;
+      const n = mobile ? 2500 : 8000;
+      const home = new Float32Array(n * 3);
+      const normal = new Float32Array(n * 2);
+      const seed = new Float32Array(n * 4);
+      const total = edges.length / 4;
+      for (let i = 0; i < n; i++) {
+        const k = Math.floor(Math.random() * total) * 4;
+        home[i * 3] = edges[k];
+        home[i * 3 + 1] = edges[k + 1];
+        normal[i * 2] = edges[k + 2];
+        normal[i * 2 + 1] = edges[k + 3];
+        seed[i * 4] = Math.random();
+        seed[i * 4 + 1] = Math.random();
+        seed[i * 4 + 2] = Math.random();
+        seed[i * 4 + 3] = Math.random();
+      }
+      nameGeometry.setAttribute("position", new THREE.BufferAttribute(home, 3));
+      nameGeometry.setAttribute("normal2", new THREE.BufferAttribute(normal, 2));
+      nameGeometry.setAttribute("seed", new THREE.BufferAttribute(seed, 4));
+      nameReady = true;
+    };
+    // Seed once the web font is in, and again when the heading changes size.
+    let seedTimer = 0;
+    const queueSeed = () => {
+      window.clearTimeout(seedTimer);
+      seedTimer = window.setTimeout(seedName, 150);
+    };
+    document.fonts.ready.then(queueSeed);
+    window.addEventListener("resize", queueSeed);
 
     const camera = new THREE.PerspectiveCamera(30, 1, 0.1, 1000);
     const basePos = new THREE.Vector3(-1.17, 0, 6);
@@ -655,7 +792,7 @@ export default function Scene() {
     const flowBasis4 = new THREE.Matrix4();
     const v = new THREE.Vector3();
     let shift = SHIFT_HOME;
-    let gain = 0.62;
+    let gain = 0.85;
     let clear = 0;
     let size = SCALE_HOME;
     let frames = 0;
@@ -682,22 +819,31 @@ export default function Scene() {
       // Slide left and dim when a section is open.
       const k = 1 - Math.exp(-dt * 3.2);
       shift += ((active ? SHIFT_SECTION : SHIFT_HOME) - shift) * k;
-      gain += ((active ? 0.5 : 0.62) - gain) * k;
+      gain += ((active ? 0.5 : 0.85) - gain) * k;
 
-      // The clearing opens a moment after the stars have gathered, and closes in a section.
+      // The name's dim patch and letter particles come in once the stars have gathered.
       const wantClear = !active && clearZone.on && time > 1.3 ? 1 : 0;
       clear += (wantClear - clear) * (1 - Math.exp(-dt * 2.2));
       if (clearZone.on && clearZone.w > 0) {
-        simMat.uniforms.uClear.value.set(
+        pointsMat.uniforms.uClear.value.set(
           (clearZone.x + clearZone.w / 2) / w,
           1 - (clearZone.y + clearZone.h / 2) / h,
           clearZone.w / 2 / w,
           clearZone.h / 2 / h,
         );
       }
-      simMat.uniforms.uClearAmt.value = clear;
-      simMat.uniforms.uAspect.value = w / h;
       pointsMat.uniforms.uClearAmt.value = clear;
+
+      // Letter particles: follow the heading, sample the same cursor flow.
+      const nameEl = clearZone.el;
+      if (nameEl && nameReady) {
+        const r = nameEl.getBoundingClientRect();
+        nameMat.uniforms.uRect.value.set(r.left, r.top, r.width, r.height);
+      }
+      nameMat.uniforms.uViewport.value.set(w, h);
+      nameMat.uniforms.uFluidVelocity.value = velocity.read.texture;
+      nameMat.uniforms.uTime.value = time;
+      nameMat.uniforms.uAlpha.value = nameReady ? clear : 0;
       size += ((active ? SCALE_SECTION : SCALE_HOME) - size) * k;
       group.position.x = 0.343 + shift;
       group.scale.set(size, size, size * 1.2);
@@ -727,6 +873,7 @@ export default function Scene() {
       renderer.setRenderTarget(null);
       renderer.clear();
       renderer.render(scene, camera);
+      if (nameReady) renderer.render(nameScene, quadCamera);
 
       // Screen positions of the ring anchors, for the landing leader lines.
       (Object.keys(ANCHOR_LOCAL) as SectionId[]).forEach((id) => {
@@ -742,7 +889,12 @@ export default function Scene() {
     raf = requestAnimationFrame(frame);
 
     return () => {
+      disposed = true;
       cancelAnimationFrame(raf);
+      window.clearTimeout(seedTimer);
+      window.removeEventListener("resize", queueSeed);
+      nameGeometry.dispose();
+      nameMat.dispose();
       window.removeEventListener("pointermove", onMove);
       window.removeEventListener("touchstart", onTouch);
       window.removeEventListener("touchmove", onTouch);
