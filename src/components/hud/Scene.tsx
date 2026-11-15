@@ -2,7 +2,7 @@
 
 import { useEffect, useRef } from "react";
 import * as THREE from "three";
-import { anchors, useHud, type SectionId } from "@/lib/hud-store";
+import { anchors, clearZone, useHud, type SectionId } from "@/lib/hud-store";
 
 // Landing background: a GPU particle cloud that settles onto a sculpted ring and is
 // stirred by the cursor through a small fluid simulation. Everything runs in shaders:
@@ -28,10 +28,10 @@ const SCALE_SECTION = 4.4;
 
 // Points on the ring, in the cloud's own space, that the landing leader lines attach to.
 const ANCHOR_LOCAL: Record<SectionId, [number, number, number]> = {
-  projects: [-0.2, 0.17, 0.02],
-  experience: [-0.27, -0.03, 0.02],
-  education: [0.19, 0.19, 0.02],
-  skills: [0.27, -0.05, 0.02],
+  projects: [-0.25, 0.2, 0.02],
+  experience: [-0.41, -0.03, 0.02],
+  education: [0.27, 0.25, 0.02],
+  skills: [0.45, -0.1, 0.02],
 };
 
 const QUAD_VERT = /* glsl */ `
@@ -200,6 +200,9 @@ const SIM_FRAG = /* glsl */ `
   uniform sampler2D uOrigin;
   uniform sampler2D uHome;
   uniform float uHomeStrength;
+  uniform vec4 uClear; // centre.xy, half size.xy, in screen UV
+  uniform float uClearAmt;
+  uniform float uAspect;
   uniform sampler2D uFluidVelocity;
   uniform sampler2D uFluidDensity;
   uniform mat4 uViewProjection;
@@ -253,8 +256,16 @@ const SIM_FRAG = /* glsl */ `
 
     // Heal: a particle that the cursor has carried off is drawn back to its resting
     // place on the surface. Close to home it is left alone, so the slow swirl carries on.
+    // Clearing: stars inside the name's rectangle are eased out to its rim, so the
+    // field parts around the name. Home is switched off in there or it would fight back.
+    vec2 cd = (screenUv - uClear.xy) / uClear.zw;
+    float cl = pow(pow(abs(cd.x), 4.0) + pow(abs(cd.y), 4.0), 0.25);
+    float inside = uClearAmt * (1.0 - smoothstep(0.7, 1.55, cl));
+    vec2 outward = normalize(vec2(cd.x * uClear.z * uAspect, cd.y * uClear.w) + 1e-5);
+    pos += uFlowBasis * vec3(outward, 0.0) * 0.009 * inside * min(uHz, 2.0);
+
     vec3 away = texture2D(uHome, vUv).xyz - pos;
-    pos += away * uHomeStrength * smoothstep(0.05, 0.2, length(away)) * min(uHz, 2.0);
+    pos += away * uHomeStrength * (1.0 - inside) * smoothstep(0.05, 0.2, length(away)) * min(uHz, 2.0);
 
     gl_FragColor = vec4(pos, 1.0);
   }
@@ -264,8 +275,11 @@ const POINTS_VERT = /* glsl */ `
   attribute vec4 random;
   uniform sampler2D uPositions;
   uniform float uDpr;
+  uniform vec4 uClear;
+  uniform float uClearAmt;
   varying vec4 vRandom;
   varying float vScale;
+  varying float vFade;
   void main() {
     vRandom = random;
     vec3 pos = texture2D(uPositions, position.xy).xyz;
@@ -275,6 +289,10 @@ const POINTS_VERT = /* glsl */ `
     vScale = smoothstep(3.0, 15.0, dist) * mix(0.5, 1.0, random.z);
     gl_PointSize = 0.04 * uDpr * 2.0 * vScale * (1000.0 / dist);
     gl_Position = projectionMatrix * mv;
+    // Whatever still crosses the name's rectangle is dimmed to a faint trace.
+    vec2 cd = (gl_Position.xy / gl_Position.w * 0.5 + 0.5 - uClear.xy) / uClear.zw;
+    float cl = pow(pow(abs(cd.x), 4.0) + pow(abs(cd.y), 4.0), 0.25);
+    vFade = 1.0 - uClearAmt * 0.94 * (1.0 - smoothstep(0.85, 1.5, cl));
   }
 `;
 
@@ -284,6 +302,7 @@ const POINTS_FRAG = /* glsl */ `
   uniform float uGain;
   varying vec4 vRandom;
   varying float vScale;
+  varying float vFade;
 
   float softLight(float b, float s) {
     return s < 0.5 ? b - (1.0 - 2.0 * s) * b * (1.0 - b) : b + (2.0 * s - 1.0) * (sqrt(b) - b);
@@ -314,7 +333,7 @@ const POINTS_FRAG = /* glsl */ `
     vec3 over = vec3(overlay(color.r, matcap), overlay(color.g, matcap), overlay(color.b, matcap));
     color = mix(color, over, 0.2);
 
-    gl_FragColor = vec4(color * uGain, 1.0);
+    gl_FragColor = vec4(color * uGain * vFade, 1.0);
   }
 `;
 
@@ -545,6 +564,9 @@ export default function Scene() {
       uOrigin: { value: originTex },
       uHome: { value: originTex },
       uHomeStrength: { value: 0 },
+      uClear: { value: new THREE.Vector4(0.5, 0.5, 0.2, 0.2) },
+      uClearAmt: { value: 0 },
+      uAspect: { value: 1 },
       uFluidVelocity: { value: null },
       uFluidDensity: { value: null },
       uViewProjection: { value: new THREE.Matrix4() },
@@ -588,7 +610,14 @@ export default function Scene() {
     const pointsMat = new THREE.ShaderMaterial({
       vertexShader: POINTS_VERT,
       fragmentShader: POINTS_FRAG,
-      uniforms: { uPositions: { value: null }, uTime: { value: 0 }, uDpr: { value: dpr }, uGain: { value: 1 } },
+      uniforms: {
+        uPositions: { value: null },
+        uTime: { value: 0 },
+        uDpr: { value: dpr },
+        uGain: { value: 1 },
+        uClear: { value: simMat.uniforms.uClear.value },
+        uClearAmt: { value: 0 },
+      },
       blending: THREE.AdditiveBlending,
       transparent: true,
       depthTest: true,
@@ -626,7 +655,8 @@ export default function Scene() {
     const flowBasis4 = new THREE.Matrix4();
     const v = new THREE.Vector3();
     let shift = SHIFT_HOME;
-    let gain = 0.85;
+    let gain = 0.62;
+    let clear = 0;
     let size = SCALE_HOME;
     let frames = 0;
     let last = performance.now();
@@ -652,7 +682,22 @@ export default function Scene() {
       // Slide left and dim when a section is open.
       const k = 1 - Math.exp(-dt * 3.2);
       shift += ((active ? SHIFT_SECTION : SHIFT_HOME) - shift) * k;
-      gain += ((active ? 0.5 : 0.85) - gain) * k;
+      gain += ((active ? 0.5 : 0.62) - gain) * k;
+
+      // The clearing opens a moment after the stars have gathered, and closes in a section.
+      const wantClear = !active && clearZone.on && time > 1.3 ? 1 : 0;
+      clear += (wantClear - clear) * (1 - Math.exp(-dt * 2.2));
+      if (clearZone.on && clearZone.w > 0) {
+        simMat.uniforms.uClear.value.set(
+          (clearZone.x + clearZone.w / 2) / w,
+          1 - (clearZone.y + clearZone.h / 2) / h,
+          clearZone.w / 2 / w,
+          clearZone.h / 2 / h,
+        );
+      }
+      simMat.uniforms.uClearAmt.value = clear;
+      simMat.uniforms.uAspect.value = w / h;
+      pointsMat.uniforms.uClearAmt.value = clear;
       size += ((active ? SCALE_SECTION : SCALE_HOME) - size) * k;
       group.position.x = 0.343 + shift;
       group.scale.set(size, size, size * 1.2);

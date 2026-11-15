@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { profile } from "@/content";
-import { anchors, SECTIONS, useHud, type SectionId } from "@/lib/hud-store";
+import { anchors, clearZone, SECTIONS, useHud, type SectionId } from "@/lib/hud-store";
 
 type Callout = { id: SectionId; side: "left" | "right"; top: string; meta: string };
 
@@ -103,6 +103,7 @@ export default function Landing() {
   const labelRefs = useRef<Partial<Record<SectionId, HTMLButtonElement | null>>>({});
   const pathRefs = useRef<Partial<Record<SectionId, SVGPathElement | null>>>({});
   const dotRefs = useRef<Partial<Record<SectionId, SVGCircleElement | null>>>({});
+  const heroRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     let raf = 0;
@@ -121,10 +122,25 @@ export default function Landing() {
         dot.setAttribute("cx", String(a.x));
         dot.setAttribute("cy", String(a.y));
       }
+      // Tell the particle scene where the name sits, with some breathing room around it.
+      const hero = heroRef.current;
+      if (hero) {
+        const r = hero.getBoundingClientRect();
+        const padX = r.width * 0.16;
+        const padY = r.height * 0.2;
+        clearZone.x = r.left - padX;
+        clearZone.y = r.top - padY;
+        clearZone.w = r.width + padX * 2;
+        clearZone.h = r.height + padY * 2;
+        clearZone.on = r.width > 0;
+      }
       raf = requestAnimationFrame(loop);
     };
     raf = requestAnimationFrame(loop);
-    return () => cancelAnimationFrame(raf);
+    return () => {
+      cancelAnimationFrame(raf);
+      clearZone.on = false;
+    };
   }, []);
 
   const hidden = active !== null;
@@ -188,7 +204,7 @@ export default function Landing() {
               className={`text-pool group absolute z-10 w-[250px] text-left transition-transform duration-300 ${c.side === "left" ? "left-[8vw]" : "right-[8vw] text-right"} ${isHover ? (c.side === "left" ? "translate-x-1" : "-translate-x-1") : ""}`}
               style={{ top: c.top }}
             >
-              <span className={`block font-display text-[34px] font-bold uppercase leading-none tracking-wide transition-colors ${isHover ? "text-cyan" : "text-bone"}`}>
+              <span className={`block font-display text-[30px] font-bold uppercase leading-none tracking-wide transition-colors ${isHover ? "text-cyan" : "text-[#b4bab7]"}`}>
                 {s.label}
               </span>
               <span className="hud mt-1 block text-mist">{c.meta}</span>
@@ -204,7 +220,7 @@ export default function Landing() {
           <span className="h-2 w-2 rounded-full bg-white" style={{ animation: "pulse-dot 1.6s infinite" }} />
           Status
         </span>
-        <p className="mt-3 font-display text-[44px] font-bold uppercase leading-none tracking-wide text-bone">Open to work</p>
+        <p className="mt-3 font-display text-[34px] font-bold uppercase leading-none tracking-wide text-[#b4bab7]">Open to work</p>
         <dl className="mt-4 grid grid-cols-[auto_1fr] gap-x-5 gap-y-1.5 border-l-2 border-cyan pl-4 font-hud text-[13px] uppercase leading-snug tracking-[0.08em]">
           <dt className="text-mist">Region</dt>
           <dd className="text-bone">Germany</dd>
@@ -224,28 +240,34 @@ export default function Landing() {
         </div>
       </div>
 
-      {/* Name plate */}
-      <div className="pointer-events-none absolute inset-x-0 bottom-[17vh] flex flex-col items-center">
-        <h1
-          className="glitch font-display text-[clamp(24px,2.1vw,38px)] font-bold uppercase leading-none tracking-[0.12em] text-bone"
-          data-text={profile.name}
-        >
-          {profile.name}
-        </h1>
-        <p className="mt-3 border border-cyan/50 bg-teal/60 px-6 py-1.5 font-display text-[clamp(15px,1.5vw,23px)] font-medium uppercase tracking-[0.2em] text-bone backdrop-blur-sm">
-          {TAGLINE}
-        </p>
+      {/* Hero: the name, in a clearing the stars keep open */}
+      <div className="pointer-events-none absolute inset-x-0 top-[47%] flex -translate-y-1/2 justify-center">
+        <div ref={heroRef} className="hero-in flex flex-col items-center text-center">
+          <h1
+            aria-label={profile.name}
+            className="font-display text-[min(7.4vw,15vh)] font-bold uppercase leading-[0.88] tracking-[0.01em] text-white"
+          >
+            {profile.name.split(" ").map((part) => (
+              <span key={part} aria-hidden="true" className="block">
+                {part}
+              </span>
+            ))}
+          </h1>
+          <p className="mt-[2.4vh] font-display text-[clamp(17px,1.55vw,24px)] font-semibold uppercase tracking-[0.16em] text-cyan">
+            {TAGLINE}
+          </p>
+        </div>
       </div>
 
       {/* Scroll hint */}
-      <div className="pointer-events-none absolute inset-x-0 bottom-[10vh] flex flex-col items-center gap-1">
-        <span className="font-display text-[clamp(17px,1.35vw,22px)] font-bold uppercase tracking-[0.34em] text-[#d6f2e6] [text-shadow:0_1px_10px_#000]">
-          Scroll to explore
-        </span>
-        <span aria-hidden="true" className="scroll-chevrons flex flex-col items-center">
+      <div className="pointer-events-none absolute inset-x-0 bottom-[10.5vh] flex justify-center">
+        <div className="text-pool relative flex flex-col items-center gap-1">
+        <span className="hud text-bone/80">Scroll to explore</span>
+        <span aria-hidden="true" className="scroll-chevrons flex scale-75 flex-col items-center">
           <i />
           <i />
         </span>
+        </div>
       </div>
 
       {/* Contact bar */}

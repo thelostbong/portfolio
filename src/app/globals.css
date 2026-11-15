@@ -104,6 +104,28 @@ body {
   pointer-events: none;
 }
 
+/* Landing name: fades up once the stars have gathered and the clearing has opened. */
+@keyframes hero-in {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+    filter: blur(6px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+    filter: none;
+  }
+}
+.hero-in {
+  animation: hero-in 1.1s cubic-bezier(0.2, 0.7, 0.2, 1) 1.9s both;
+}
+@media (prefers-reduced-motion: reduce) {
+  .hero-in {
+    animation: none;
+  }
+}
+
 /* ---- Panels and cards ---- */
 
 .panel {
