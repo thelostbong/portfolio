@@ -43,7 +43,7 @@ function TerrainMap() {
     const g = c.getContext("2d");
     if (!g) return;
     g.scale(dpr, dpr);
-    g.strokeStyle = "rgba(52,192,138,0.75)";
+    g.strokeStyle = "rgba(233,180,76,0.75)";
     g.lineWidth = 1;
     const cols = 22;
     const rows = 12;
@@ -77,11 +77,11 @@ function TerrainMap() {
     }
     g.globalAlpha = 1;
     const [pxx, pyy] = project(12, 6);
-    g.fillStyle = "#dddddd";
+    g.fillStyle = "#e4e6ea";
     g.beginPath();
     g.arc(pxx, pyy, 2.6, 0, Math.PI * 2);
     g.fill();
-    g.strokeStyle = "#dddddd";
+    g.strokeStyle = "#e4e6ea";
     g.beginPath();
     g.arc(pxx, pyy, 7, 0, Math.PI * 2);
     g.stroke();
@@ -152,13 +152,13 @@ export default function Landing() {
       aria-hidden={hidden}
     >
       {/* Tall brackets that frame the profile */}
-      <div className="pointer-events-none absolute bottom-[19vh] left-[5vw] top-[19vh] w-3 border-y border-l border-cyan/40" />
-      <div className="pointer-events-none absolute bottom-[19vh] right-[5vw] top-[19vh] w-3 border-y border-r border-cyan/40" />
+      <div className="pointer-events-none absolute bottom-[19vh] left-[5vw] top-[19vh] w-3 border-y border-l border-rule/55" />
+      <div className="pointer-events-none absolute bottom-[19vh] right-[5vw] top-[19vh] w-3 border-y border-r border-rule/55" />
       <svg className="pointer-events-none absolute inset-0 h-full w-full" aria-hidden="true">
         {/* Leader lines from labels to anchors on the particle ring */}
         <g fill="none" strokeWidth="1">
           {CALLOUTS.map((c) => (
-            <g key={c.id} style={{ color: hover === c.id ? "#dddddd" : "#34c08a" }}>
+            <g key={c.id} style={{ color: hover === c.id ? "#e9b44c" : "#9aa0a9" }}>
               <path
                 ref={(el) => {
                   pathRefs.current[c.id] = el;
@@ -205,7 +205,7 @@ export default function Landing() {
               className={`text-pool group absolute z-10 w-[250px] text-left transition-transform duration-300 ${c.side === "left" ? "left-[8vw]" : "right-[8vw] text-right"} ${isHover ? (c.side === "left" ? "translate-x-1" : "-translate-x-1") : ""}`}
               style={{ top: c.top }}
             >
-              <span className={`block font-display text-[30px] font-bold uppercase leading-none tracking-wide transition-colors ${isHover ? "text-cyan" : "text-[#b4bab7]"}`}>
+              <span className={`block font-display text-[30px] font-bold uppercase leading-none tracking-wide transition-colors ${isHover ? "text-cyan" : "text-[#b8bcc2]"}`}>
                 {s.label}
               </span>
               <span className="hud mt-1 block text-mist">{c.meta}</span>
@@ -218,10 +218,10 @@ export default function Landing() {
       {/* Bottom left: status */}
       <div className="text-pool absolute bottom-[10vh] left-[7vw] w-[340px]">
         <span className="chip chip-alert inline-flex items-center gap-2 !px-3 !py-1 !text-[12px]">
-          <span className="h-2 w-2 rounded-full bg-white" style={{ animation: "pulse-dot 1.6s infinite" }} />
+          <span className="h-2 w-2 rounded-full bg-ink" style={{ animation: "pulse-dot 1.6s infinite" }} />
           Status
         </span>
-        <p className="mt-3 font-display text-[34px] font-bold uppercase leading-none tracking-wide text-[#b4bab7]">Open to work</p>
+        <p className="mt-3 font-display text-[34px] font-bold uppercase leading-none tracking-wide text-[#b8bcc2]">Open to work</p>
         <dl className="mt-4 grid grid-cols-[auto_1fr] gap-x-5 gap-y-1.5 border-l-2 border-cyan pl-4 font-hud text-[13px] uppercase leading-snug tracking-[0.08em]">
           <dt className="text-mist">Region</dt>
           <dd className="text-bone">Germany</dd>
@@ -270,7 +270,7 @@ export default function Landing() {
       </div>
 
       {/* Contact bar */}
-      <div className="absolute inset-x-[7vw] bottom-[4.4vh] flex items-end justify-between border-t border-cyan/30 pt-2">
+      <div className="absolute inset-x-[7vw] bottom-[4.4vh] flex items-end justify-between border-t border-rule/45 pt-2">
         {FOOTER_LINKS.map((l) => (
           <a
             key={l.label}

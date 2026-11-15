@@ -165,8 +165,8 @@ const ExpTimeline = forwardRef<ExpTimelineHandle>(function ExpTimeline(_, ref) {
       {model && (
         <>
           <svg width={model.w} height={model.h} className="absolute inset-0" role="img" aria-label={`Career line, ${model.total} months of work, newest role first`}>
-            <line x1="0" x2={model.w} y1={model.yBase} y2={model.yBase} stroke="rgb(138 138 138 / 0.16)" strokeDasharray="2 6" />
-            <path d={model.line} fill="none" stroke="rgb(52 192 138 / 0.16)" strokeWidth="2" strokeLinejoin="round" />
+            <line x1="0" x2={model.w} y1={model.yBase} y2={model.yBase} stroke="rgb(138 144 153 / 0.16)" strokeDasharray="2 6" />
+            <path d={model.line} fill="none" stroke="rgb(150 156 166 / 0.16)" strokeWidth="2" strokeLinejoin="round" />
             <path
               ref={lineRef}
               d={model.line}
@@ -198,7 +198,7 @@ const ExpTimeline = forwardRef<ExpTimelineHandle>(function ExpTimeline(_, ref) {
             ))}
 
             <g ref={tipRef}>
-              <circle r="9" fill="rgb(52 192 138 / 0.18)" className="exp-pulse" />
+              <circle r="9" fill="rgb(150 156 166 / 0.18)" className="exp-pulse" />
               <circle r="4.5" fill="var(--color-cyan)" />
             </g>
           </svg>
@@ -216,7 +216,7 @@ const ExpTimeline = forwardRef<ExpTimelineHandle>(function ExpTimeline(_, ref) {
                   ))}
                 </div>
               </div>
-              <dl data-i="4" className="flex min-w-0 flex-col justify-center gap-5 border-l border-cyan/20 pl-8">
+              <dl data-i="4" className="flex min-w-0 flex-col justify-center gap-5 border-l border-rule/35 pl-8">
                 {[
                   ["2 yrs", "production DevOps and cloud"],
                   ["2", "research assistant roles"],

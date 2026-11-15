@@ -17,7 +17,7 @@ const win2 = (name: string, a: number, b: number, c: number, d: number, f = 3) =
 
 function Stage({ label, css, children }: { label: string; css: string; children: ReactNode }) {
   return (
-    <div className="viz relative h-full min-h-[110px] w-full overflow-hidden border border-cyan/20 bg-ink/50">
+    <div className="viz relative h-full min-h-[110px] w-full overflow-hidden border border-rule/35 bg-ink/50">
       <style>{css}</style>
       <svg viewBox="0 0 840 190" preserveAspectRatio="xMidYMid meet" className="absolute inset-0 h-full w-full" role="img" aria-label={label}>
         {children}
@@ -283,13 +283,13 @@ function ThreadlineViz() {
           <rect width="56" height="56" className="vz-fb" />
           <g className="tl-noise" style={{ animationDelay: `${i * 0.2}s`, opacity: 0, filter: "blur(1.2px)" }}>
             {NOISE.map((n, j) => (
-              <rect key={j} x={n.x + 3} y={n.y + 3} width={n.w} height={n.w} fill="rgb(138 138 138 / .8)" />
+              <rect key={j} x={n.x + 3} y={n.y + 3} width={n.w} height={n.w} fill="rgb(138 144 153 / .8)" />
             ))}
           </g>
           <g className="tl-shirt" style={{ animationDelay: `${i * 0.2}s`, opacity: 0 }} transform={`translate(${28 - 28 * t.s} ${28 - 26 * t.s}) scale(${t.s})`}>
             <path d={SHIRT} transform="translate(0 4)" className="vz-shirt" />
-            {t.extra === "print" && <circle cx="28" cy="30" r="5" fill="rgb(221 221 221 / .8)" />}
-            {t.extra === "stripe" && <path d="M16,32 h24 M16,38 h24" stroke="rgb(221 221 221 / .65)" strokeWidth="2" />}
+            {t.extra === "print" && <circle cx="28" cy="30" r="5" fill="rgb(228 230 234 / .8)" />}
+            {t.extra === "stripe" && <path d="M16,32 h24 M16,38 h24" stroke="rgb(228 230 234 / .65)" strokeWidth="2" />}
           </g>
         </g>
       ))}
@@ -308,7 +308,7 @@ function ThreadlineViz() {
       <rect x="650" y="34" width="150" height="120" className="vz-fb" />
       <g style={anim("tl-keep")} transform="translate(668 40)">
         <path d={SHIRT} transform="scale(2.4) translate(0 2)" className="vz-shirt" />
-        <path d="M24,64 h72" stroke="rgb(221 221 221 / .65)" strokeWidth="2.4" transform="scale(1) translate(0 20)" />
+        <path d="M24,64 h72" stroke="rgb(228 230 234 / .65)" strokeWidth="2.4" transform="scale(1) translate(0 20)" />
       </g>
       <text x="725" y="172" textAnchor="middle" className="vz-t vz-tc" style={anim("tl-keep")}>Catalogue-ready</text>
     </Stage>
@@ -453,7 +453,7 @@ function HeartbeatViz() {
           <rect x="22" y="32" width="226" height="118" />
         </clipPath>
         <pattern id="hb-grid" width="20" height="20" patternUnits="userSpaceOnUse">
-          <path d="M20,0 H0 V20" fill="none" stroke="rgb(52 192 138 / .12)" strokeWidth="1" />
+          <path d="M20,0 H0 V20" fill="none" stroke="rgb(150 156 166 / .12)" strokeWidth="1" />
         </pattern>
       </defs>
       <rect x="20" y="30" width="230" height="122" className="vz-fb" />
@@ -482,7 +482,7 @@ function HeartbeatViz() {
           <text x="290" y={(y as number) + 7} className="vz-t" style={{ fontSize: 9 }}>{n as string}</text>
           <rect x="346" y={y as number} width={w as number} height="8" className="vz-fillc" opacity="0.75" />
           {(extra as number) > 0 && (
-            <rect x={346 + (w as number)} y={y as number} width={extra as number} height="8" className="vz-s hb-grow" strokeDasharray="3 2" style={{ fill: "rgb(52 192 138 / .22)" }} />
+            <rect x={346 + (w as number)} y={y as number} width={extra as number} height="8" className="vz-s hb-grow" strokeDasharray="3 2" style={{ fill: "rgb(150 156 166 / .22)" }} />
           )}
         </g>
       ))}

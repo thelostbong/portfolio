@@ -25,7 +25,7 @@ function Card({ children, tag, wide, short }: { children: ReactNode; tag: string
 function Stats({ stats, cols, size = "md" }: { stats: Stat[]; cols?: number; size?: "md" | "lg" }) {
   const n = cols ?? Math.min(stats.length, 4);
   return (
-    <dl className="grid gap-x-5 gap-y-3 border-t border-cyan/20 pt-3" style={{ gridTemplateColumns: `repeat(${n}, minmax(0, 1fr))` }}>
+    <dl className="grid gap-x-5 gap-y-3 border-t border-rule/35 pt-3" style={{ gridTemplateColumns: `repeat(${n}, minmax(0, 1fr))` }}>
       {stats.map((s) => (
         <div key={s.label}>
           <dd className={`font-display font-semibold leading-none text-cyan ${size === "lg" ? "text-[34px]" : "text-[24px]"}`}>{s.value}</dd>
@@ -99,7 +99,7 @@ const projects = (): ReactNode[] => [
     <h2 className="font-display text-[clamp(22px,2vw,28px)] font-bold uppercase leading-none">Other repositories</h2>
     <ul className="mt-5 grid min-h-0 flex-1 grid-cols-2 content-start gap-x-10 gap-y-4 overflow-hidden">
       {ownRepos.map((a) => (
-        <li key={a.repo} className="flex items-baseline justify-between gap-3 border-l-2 border-cyan/40 pl-3">
+        <li key={a.repo} className="flex items-baseline justify-between gap-3 border-l-2 border-rule/55 pl-3">
           <span className="truncate font-display text-[18px] font-semibold uppercase leading-tight">{a.title}</span>
           <span className="hud shrink-0 text-mist">{a.language}</span>
         </li>
@@ -117,7 +117,7 @@ const skills = (): ReactNode[] => [
   <article key="skills" className="project-card rail-card panel flex h-full max-h-[460px] shrink-0 flex-col justify-center overflow-hidden px-8 py-6">
     <div className="grid grid-cols-2 gap-x-12 gap-y-8">
       {skillData.map((g) => (
-        <section key={g.group} className="border-l-2 border-cyan/50 pl-5">
+        <section key={g.group} className="border-l-2 border-rule/65 pl-5">
           <h2 className="hud text-cyan">{g.group}</h2>
           <p className="mt-2.5 font-display text-[clamp(22px,1.9vw,28px)] font-semibold uppercase leading-[1.18] text-bone">
             {g.core.join(" / ")}
@@ -156,7 +156,7 @@ const education = (): ReactNode[] => [
     <h2 className="font-display text-[34px] font-bold uppercase leading-none">Languages</h2>
     <ul className="mt-6 space-y-4">
       {languageData.map((c) => (
-        <li key={c.language} className="flex items-baseline justify-between border-b border-cyan/20 pb-2">
+        <li key={c.language} className="flex items-baseline justify-between border-b border-rule/35 pb-2">
           <span className="font-display text-2xl font-semibold uppercase">{c.language}</span>
           <span className="hud text-cyan">{c.level}</span>
         </li>
@@ -189,7 +189,7 @@ export type Detail = { tag: string; title: string; sub?: string; body: ReactNode
 
 function Metrics({ stats }: { stats: Stat[] }) {
   return (
-    <aside className="border-l border-cyan/25 pl-6">
+    <aside className="border-l border-rule/40 pl-6">
       <p className="hud text-cyan-dim">Key metrics</p>
       <dl className="mt-4 space-y-5">
         {stats.map((st) => (

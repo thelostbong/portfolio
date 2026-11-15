@@ -2,16 +2,17 @@
 
 /* Tokens mirror design/tokens.json. Keep the two in sync. */
 @theme {
-  --color-ink: #000000;
-  --color-abyss: #060908;
-  --color-deep: #0c110f;
-  --color-teal: #161d1a;
-  --color-teal-lt: #1f4d3c;
-  --color-cyan: #34c08a;
-  --color-cyan-dim: #1f7a57;
-  --color-bone: #dddddd;
-  --color-mist: #8a8a8a;
+  --color-ink: #05070a;
+  --color-abyss: #080a0e;
+  --color-deep: #0d1015;
+  --color-teal: #171a20;
+  --color-teal-lt: #2c313a;
+  --color-cyan: #e9b44c;
+  --color-cyan-dim: #9a7630;
+  --color-bone: #e4e6ea;
+  --color-mist: #8a9099;
   --color-alert: #b8374a;
+  --color-rule: #8a9099;
 
   --font-display: "Barlow Condensed", "Arial Narrow", sans-serif;
   --font-body: "Barlow", system-ui, sans-serif;
@@ -23,8 +24,8 @@
 
 :root {
   color-scheme: dark;
-  --line: rgb(52 192 138 / 0.24);
-  --line-strong: rgb(52 192 138 / 0.55);
+  --line: rgb(150 156 166 / 0.24);
+  --line-strong: rgb(233 180 76 / 0.55);
 }
 
 html,
@@ -59,8 +60,8 @@ body {
 /* Faint measurement grid over the whole screen. */
 .screen-grid {
   background-image:
-    linear-gradient(to right, rgb(52 192 138 / 0.055) 1px, transparent 1px),
-    linear-gradient(to bottom, rgb(52 192 138 / 0.055) 1px, transparent 1px);
+    linear-gradient(to right, rgb(150 156 166 / 0.055) 1px, transparent 1px),
+    linear-gradient(to bottom, rgb(150 156 166 / 0.055) 1px, transparent 1px);
   background-size: 64px 64px;
   mask-image: radial-gradient(ellipse at 50% 50%, black 30%, transparent 85%);
 }
@@ -86,7 +87,7 @@ body {
   }
 }
 .screen-scan {
-  background: linear-gradient(to bottom, transparent, rgb(52 192 138 / 0.045), transparent);
+  background: linear-gradient(to bottom, transparent, rgb(150 156 166 / 0.045), transparent);
   height: 18vh;
   animation: scan 9s linear infinite;
 }
@@ -130,7 +131,7 @@ body {
 
 .panel {
   position: relative;
-  background: linear-gradient(160deg, rgb(22 29 26 / 0.34), rgb(8 8 10 / 0.62));
+  background: linear-gradient(160deg, rgb(23 26 32 / 0.34), rgb(8 8 10 / 0.62));
   border: 1px solid var(--line);
   backdrop-filter: blur(6px);
 }
@@ -168,16 +169,16 @@ body {
 }
 
 .chip-alert {
-  background: var(--color-alert);
+  background: var(--color-cyan);
   border-color: transparent;
-  color: #fff;
+  color: #05070a;
   letter-spacing: 0.14em;
   text-transform: uppercase;
 }
 
 .numeral-outline {
   color: transparent;
-  -webkit-text-stroke: 1px rgb(52 192 138 / 0.45);
+  -webkit-text-stroke: 1px rgb(233 180 76 / 0.45);
 }
 
 /* Title glitch: two clipped copies drift apart for a moment. */
@@ -254,8 +255,8 @@ body {
   width: 14px;
   height: 14px;
   margin-top: -5px;
-  border-right: 2.5px solid #d6f2e6;
-  border-bottom: 2.5px solid #d6f2e6;
+  border-right: 2.5px solid #f7e4b8;
+  border-bottom: 2.5px solid #f7e4b8;
   transform: rotate(45deg);
   animation: chevron 1.5s ease-in-out infinite;
 }
@@ -279,7 +280,7 @@ body {
   font-weight: 700;
   letter-spacing: 0.12em;
   text-transform: uppercase;
-  color: #d6f2e6;
+  color: #f7e4b8;
   transition: color 0.2s;
 }
 .ghost-btn .sign {
@@ -313,17 +314,17 @@ body {
 
 /* ---- Project scenes (SVG, drawn in viz.tsx) ---- */
 .viz svg { overflow: hidden; }
-.viz .vz-f   { fill: rgb(52 192 138 / 0.1); stroke: var(--color-cyan-dim); stroke-width: 1.2; }
-.viz .vz-fb  { fill: rgb(22 29 26 / 0.38); stroke: rgb(52 192 138 / 0.45); stroke-width: 1.1; }
+.viz .vz-f   { fill: rgb(150 156 166 / 0.1); stroke: var(--color-cyan-dim); stroke-width: 1.2; }
+.viz .vz-fb  { fill: rgb(23 26 32 / 0.38); stroke: rgb(233 180 76 / 0.45); stroke-width: 1.1; }
 .viz .vz-s   { fill: none; stroke: var(--color-cyan); stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
 .viz .vz-sb  { fill: none; stroke: var(--color-bone); stroke-width: 1.5; stroke-linecap: round; }
 .viz .vz-sm  { fill: none; stroke: var(--color-mist); stroke-width: 1.5; stroke-linecap: round; }
-.viz .vz-sd  { fill: none; stroke: rgb(138 138 138 / 0.4); stroke-width: 1; }
+.viz .vz-sd  { fill: none; stroke: rgb(138 144 153 / 0.4); stroke-width: 1; }
 .viz .vz-a   { fill: rgb(184 55 74 / 0.18); stroke: #e0566b; stroke-width: 1.6; }
 .viz .vz-fillc { fill: var(--color-cyan); stroke: none; }
 .viz .vz-fillb { fill: var(--color-bone); stroke: none; }
 .viz .vz-fillm { fill: var(--color-mist); stroke: none; }
-.viz .vz-shirt { fill: rgb(184 55 74 / 0.8); stroke: rgb(221 221 221 / 0.35); stroke-width: 1; }
+.viz .vz-shirt { fill: rgb(184 55 74 / 0.8); stroke: rgb(228 230 234 / 0.35); stroke-width: 1; }
 .viz .vz-t   { font-family: var(--font-hud); font-size: 11px; letter-spacing: 0.04em; fill: var(--color-mist); }
 .viz .vz-tc  { fill: var(--color-cyan); }
 .viz .vz-tb  { fill: var(--color-bone); }
@@ -342,6 +343,6 @@ body {
 .exp-t { font-family: var(--font-hud); font-size: 10px; letter-spacing: 0.06em; fill: var(--color-mist); }
 .exp-head { font-size: 13px; font-weight: 700; fill: var(--color-bone); letter-spacing: 0.04em; }
 .exp-sub { font-size: 11px; fill: var(--color-cyan); }
-.exp-tip { font-size: 12px; font-weight: 700; fill: #d6f2e6; }
+.exp-tip { font-size: 12px; font-weight: 700; fill: #f7e4b8; }
 .exp-pulse { transform-box: fill-box; transform-origin: center; animation: exp-pulse 1.8s ease-out infinite; }
 @keyframes exp-pulse { 0% { transform: scale(0.6); opacity: 1; } 100% { transform: scale(1.7); opacity: 0; } }

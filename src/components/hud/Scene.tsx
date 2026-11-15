@@ -307,7 +307,7 @@ const POINTS_FRAG = /* glsl */ `
     // Most points are faint and a few are bright, like a star field.
     float mag = 0.25 + 0.75 * pow(vRandom.w, 4.0);
     vec3 color = vec3(mix(0.0, 0.2, vRandom.x)) * mag;
-    color = mix(color, vec3(0.25, 0.8, 0.55), pow(vRandom.z, 100.0));
+    color = mix(color, vec3(0.95, 0.72, 0.3), pow(vRandom.z, 100.0));
     color *= 0.5 + (0.4 + sin(uTime * 4.0 + vRandom.y * 20.0)) * pow(vRandom.z, 10.0) * 2.5;
 
     // Soft sphere shading, in place of a matcap texture: lit from the upper left,
@@ -379,7 +379,7 @@ const NAME_FRAG = /* glsl */ `
     if (dot(uv, uv) > 0.25) discard;
     // Faint on the outline, so the letters stay crisp; brightest just after leaving it.
     float fade = smoothstep(0.0, 0.22, vLife) * pow(1.0 - vLife, 1.3);
-    vec3 color = mix(vec3(0.82), vec3(0.3, 0.85, 0.6), step(0.9, vSeed.w));
+    vec3 color = mix(vec3(0.82), vec3(0.95, 0.72, 0.3), step(0.9, vSeed.w));
     gl_FragColor = vec4(color * fade * uAlpha * mix(0.3, 0.8, vSeed.z), 1.0);
   }
 `;
@@ -433,7 +433,7 @@ export default function Scene() {
     const mobile = window.matchMedia("(max-width: 760px), (pointer: coarse)").matches;
     const dpr = Math.min(window.devicePixelRatio || 1, 2);
     renderer.setPixelRatio(dpr);
-    renderer.setClearColor(0x000000, 1);
+    renderer.setClearColor(0x05070a, 1);
     renderer.autoClear = false;
 
     // ---- Fullscreen pass plumbing ----

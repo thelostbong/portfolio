@@ -356,7 +356,7 @@ export default function Subscreen() {
         <button
           type="button"
           onClick={close}
-          className="hud flex items-center gap-3 border border-cyan/50 bg-ink/50 px-4 py-2 text-cyan transition-colors hover:bg-cyan hover:text-ink"
+          className="hud flex items-center gap-3 border border-rule/65 bg-ink/50 px-4 py-2 text-cyan transition-colors hover:bg-cyan hover:text-ink"
         >
           <span aria-hidden="true">←</span> Back <span className="text-mist">Esc</span>
         </button>
@@ -367,7 +367,7 @@ export default function Subscreen() {
               type="button"
               onClick={() => go(s.id)}
               aria-current={s.id === active}
-              className={`hud border px-3.5 py-2 transition-colors ${s.id === active ? "border-cyan bg-cyan text-ink" : "border-cyan/25 text-mist hover:border-cyan/70 hover:text-bone"}`}
+              className={`hud border px-3.5 py-2 transition-colors ${s.id === active ? "border-cyan bg-cyan text-ink" : "border-rule/40 text-mist hover:border-cyan/70 hover:text-bone"}`}
             >
               {s.label}
             </button>
@@ -417,12 +417,12 @@ export default function Subscreen() {
                 <button
                   type="button"
                   onClick={closeDetail}
-                  className="hud shrink-0 border border-cyan/50 px-4 py-2 text-cyan transition-colors hover:bg-cyan hover:text-ink"
+                  className="hud shrink-0 border border-rule/65 px-4 py-2 text-cyan transition-colors hover:bg-cyan hover:text-ink"
                 >
                   Close <span className="text-mist">Esc</span>
                 </button>
               </header>
-              <div className="card-scroll mt-5 min-h-0 flex-1 border-t border-cyan/20 pr-3 pt-5" data-lenis-prevent>
+              <div className="card-scroll mt-5 min-h-0 flex-1 border-t border-rule/35 pr-3 pt-5" data-lenis-prevent>
                 {detail.body}
               </div>
             </div>
