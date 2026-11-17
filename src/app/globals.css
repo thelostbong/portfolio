@@ -449,3 +449,35 @@ html[data-layout="compact"] .text-pool::before {
   transform-origin: center;
   transform: scaleX(-1);
 }
+
+/* Lower row of a folded scene: mirrored so the flow runs back right to left. Shapes and
+   moving dots mirror with it; each label is flipped back in place so it still reads. */
+.fold-back {
+  transform: scaleX(-1);
+}
+.fold-back .viz text {
+  scale: -1 1;
+  transform-box: fill-box;
+  transform-origin: center;
+}
+/* The link between the rows: the scene's flow, moving down the right edge. */
+.fold-link {
+  stroke: var(--color-cyan);
+  stroke-opacity: 0.75;
+  stroke-width: 1.4;
+  stroke-dasharray: 4 5;
+  animation: fold-flow 0.9s linear infinite;
+}
+@keyframes fold-flow {
+  to {
+    stroke-dashoffset: -18;
+  }
+}
+[data-slot]:not([data-focus]) .fold-link {
+  animation-play-state: paused;
+}
+@media (prefers-reduced-motion: reduce) {
+  .fold-link {
+    animation: none;
+  }
+}
