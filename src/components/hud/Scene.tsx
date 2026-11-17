@@ -1,8 +1,9 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import * as THREE from "three";
 import { anchors, clearZone, useHud, type SectionId } from "@/lib/hud-store";
+import { isCompact } from "@/lib/layout";
 
 // Landing background: a GPU particle cloud that settles onto a sculpted ring and is
 // stirred by the cursor through a small fluid simulation. Everything runs in shaders:
@@ -25,6 +26,14 @@ const SHIFT_HOME = -0.42;
 const SHIFT_SECTION = -2.3;
 const SCALE_HOME = 5;
 const SCALE_SECTION = 4.4;
+
+// The same placement for the compact (phone) layout. The ring sits a little above the
+// middle on the landing; inside a section it rises behind the title so the cards have
+// the lower part of the screen. FIT_ASPECT: on a screen narrower than this the camera
+// widens its view so the ring keeps the width it has on a landscape screen.
+const WIDE_PLACE = { homeX: SHIFT_HOME, homeY: 0.2, homeScale: SCALE_HOME, secX: SHIFT_SECTION, secY: 0.2, secScale: SCALE_SECTION };
+const COMPACT_PLACE = { homeX: SHIFT_HOME, homeY: 0.2, homeScale: 5.5, secX: SHIFT_HOME, secY: 1.55, secScale: 3.4 };
+const FIT_ASPECT = 1.6;
 
 // Points on the ring, in the cloud's own space, that the landing leader lines attach to.
 const ANCHOR_LOCAL: Record<SectionId, [number, number, number]> = {
@@ -417,11 +426,32 @@ const clampMap = (v: number, a: number, b: number, c: number, d: number) =>
 
 export default function Scene() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  // Bumped when the GPU context is lost (iOS does this to background tabs): a fresh
+  // canvas gets a fresh context and the scene builds itself again.
+  const [gen, setGen] = useState(0);
 
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
     const setReady = useHud.getState().setReady;
+    let lost = false;
+    let lostTimer = 0;
+    const rebuild = () => {
+      if (lost && document.visibilityState === "visible") setGen((g) => g + 1);
+    };
+    const onLost = (e: Event) => {
+      e.preventDefault();
+      lost = true;
+      window.clearTimeout(lostTimer);
+      lostTimer = window.setTimeout(rebuild, 600);
+    };
+    const onVisible = () => {
+      window.clearTimeout(lostTimer);
+      lostTimer = window.setTimeout(rebuild, 300);
+    };
+    canvas.addEventListener("webglcontextlost", onLost);
+    canvas.addEventListener("webglcontextrestored", rebuild);
+    document.addEventListener("visibilitychange", onVisible);
 
     let renderer: THREE.WebGLRenderer;
     try {
@@ -590,7 +620,10 @@ export default function Scene() {
     };
 
     // ---- Particles ----
-    const side = mobile ? 128 : 512;
+    // Phones draw 256 x 256 (65k) particles: about the same density per pixel as the
+    // desktop's 262k on a screen a sixth of the size. A phone that cannot keep up drops to
+    // a quarter of them after its first seconds (see the frame loop).
+    const side = mobile ? 256 : 512;
     const count = side * side;
     const originData = new Float32Array(count * 4);
     for (let i = 0; i < count; i++) {
@@ -742,7 +775,7 @@ export default function Scene() {
         }
       }
       if (edges.length === 0) return;
-      const n = mobile ? 2500 : 8000;
+      const n = mobile ? 4000 : 8000;
       const home = new Float32Array(n * 3);
       const normal = new Float32Array(n * 2);
       const seed = new Float32Array(n * 4);
@@ -780,6 +813,12 @@ export default function Scene() {
     const resize = () => {
       renderer.setSize(window.innerWidth, window.innerHeight, false);
       camera.aspect = window.innerWidth / window.innerHeight;
+      // Portrait screens: widen the vertical view so the ring is as wide, relative to the
+      // screen, as on a landscape one. The wide layout keeps the original 30 degrees.
+      camera.fov =
+        isCompact() && camera.aspect < FIT_ASPECT
+          ? THREE.MathUtils.radToDeg(2 * Math.atan((Math.tan(THREE.MathUtils.degToRad(15)) * FIT_ASPECT) / camera.aspect))
+          : 30;
       camera.updateProjectionMatrix();
     };
     resize();
@@ -792,6 +831,7 @@ export default function Scene() {
     const flowBasis4 = new THREE.Matrix4();
     const v = new THREE.Vector3();
     let shift = SHIFT_HOME;
+    let lift = WIDE_PLACE.homeY;
     let gain = 0.85;
     let clear = 0;
     let size = SCALE_HOME;
@@ -799,6 +839,10 @@ export default function Scene() {
     let last = performance.now();
     let raf = 0;
     const t0 = last;
+    // Slow-device check (touch screens only): average frame time over frames 60 to 180.
+    const fullQuality = /[?&]q=full\b/.test(window.location.search);
+    let slowSum = 0;
+    let probe = 0;
 
     const frame = (now: number) => {
       raf = requestAnimationFrame(frame);
@@ -809,16 +853,23 @@ export default function Scene() {
       const h = window.innerHeight;
       const active = useHud.getState().active;
 
-      // Gaze: the camera leans a little with the cursor.
+      const compact = isCompact();
+      const place = compact ? COMPACT_PLACE : WIDE_PLACE;
+
+      // Gaze: the camera leans a little with the cursor. Touch screens have no resting
+      // cursor, so there the camera also drifts slowly on its own.
       const mx = (mouse.x / w) * 2 - 1;
       const my = (mouse.y / h) * 2 - 1;
-      camTarget.set(basePos.x - mx * 0.4, basePos.y + my * 0.7, basePos.z);
+      const driftX = mobile ? Math.sin(time * 0.13) * 0.35 : 0;
+      const driftY = mobile ? Math.sin(time * 0.09 + 1.3) * 0.25 : 0;
+      camTarget.set(basePos.x - mx * 0.4 + driftX, basePos.y + my * 0.7 + driftY, basePos.z);
       camera.position.lerp(camTarget, 0.05);
       camera.lookAt(0, 0, 0);
 
       // Slide left and dim when a section is open.
       const k = 1 - Math.exp(-dt * 3.2);
-      shift += ((active ? SHIFT_SECTION : SHIFT_HOME) - shift) * k;
+      shift += ((active ? place.secX : place.homeX) - shift) * k;
+      lift += ((active ? place.secY : place.homeY) - lift) * k;
       gain += ((active ? 0.5 : 0.85) - gain) * k;
 
       // The name's dim patch and letter particles come in once the stars have gathered.
@@ -844,8 +895,9 @@ export default function Scene() {
       nameMat.uniforms.uFluidVelocity.value = velocity.read.texture;
       nameMat.uniforms.uTime.value = time;
       nameMat.uniforms.uAlpha.value = nameReady ? clear : 0;
-      size += ((active ? SCALE_SECTION : SCALE_HOME) - size) * k;
+      size += ((active ? place.secScale : place.homeScale) - size) * k;
       group.position.x = 0.343 + shift;
+      group.position.y = lift;
       group.scale.set(size, size, size * 1.2);
       scene.updateMatrixWorld();
       camera.updateMatrixWorld();
@@ -885,11 +937,20 @@ export default function Scene() {
       });
 
       if (frames < 40 && ++frames === 40) setReady(true);
+      if (mobile && !fullQuality && probe < 180) {
+        probe++;
+        if (probe > 60) slowSum += dt;
+        if (probe === 180 && slowSum / 120 > 1 / 38) geometry.setDrawRange(0, count / 4);
+      }
     };
     raf = requestAnimationFrame(frame);
 
     return () => {
       disposed = true;
+      window.clearTimeout(lostTimer);
+      canvas.removeEventListener("webglcontextlost", onLost);
+      canvas.removeEventListener("webglcontextrestored", rebuild);
+      document.removeEventListener("visibilitychange", onVisible);
       cancelAnimationFrame(raf);
       window.clearTimeout(seedTimer);
       window.removeEventListener("resize", queueSeed);
@@ -912,7 +973,7 @@ export default function Scene() {
       quad.geometry.dispose();
       renderer.dispose();
     };
-  }, []);
+  }, [gen]);
 
-  return <canvas ref={canvasRef} className="absolute inset-0 h-full w-full" aria-hidden="true" />;
+  return <canvas key={gen} ref={canvasRef} className="absolute inset-0 h-full w-full" aria-hidden="true" />;
 }

@@ -1,4 +1,5 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
+import { LAYOUT_SCRIPT } from "@/lib/layout-query";
 import "@fontsource/barlow/400.css";
 import "@fontsource/barlow/500.css";
 import "@fontsource/barlow/600.css";
@@ -41,9 +42,21 @@ export const metadata: Metadata = {
   },
 };
 
+// viewport-fit=cover lets the dark screen run under the phone notch; safe-area insets keep
+// the controls clear of it.
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  viewportFit: "cover",
+  themeColor: "#05070a",
+};
+
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
-    <html lang="en" className="antialiased">
+    <html lang="en" className="antialiased" suppressHydrationWarning>
+      <head>
+        <script dangerouslySetInnerHTML={{ __html: LAYOUT_SCRIPT }} />
+      </head>
       <body>{children}</body>
     </html>
   );

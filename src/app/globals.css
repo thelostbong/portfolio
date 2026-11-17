@@ -1,5 +1,9 @@
 @import "tailwindcss";
 
+/* compact: phones and small tablets. <html data-layout> is set before first paint
+   (src/lib/layout-query.ts). The wide layout never matches these rules. */
+@custom-variant compact (&:where([data-layout="compact"], [data-layout="compact"] *));
+
 /* Tokens mirror design/tokens.json. Keep the two in sync. */
 @theme {
   --color-ink: #05070a;
@@ -346,3 +350,79 @@ body {
 .exp-tip { font-size: 12px; font-weight: 700; fill: #f7e4b8; }
 .exp-pulse { transform-box: fill-box; transform-origin: center; animation: exp-pulse 1.8s ease-out infinite; }
 @keyframes exp-pulse { 0% { transform: scale(0.6); opacity: 1; } 100% { transform: scale(1.7); opacity: 0; } }
+
+/* ================================================================== */
+/* Compact layout (phones, small tablets). Everything below is scoped  */
+/* to html[data-layout="compact"], so the wide layout is untouched.    */
+/* ================================================================== */
+html[data-layout="compact"] {
+  /* Card width on the rail: full width minus margins, with the next card peeking in. */
+  --cw: calc(100vw - 56px);
+  --safe-t: env(safe-area-inset-top, 0px);
+  --safe-b: env(safe-area-inset-bottom, 0px);
+  overscroll-behavior: none;
+  -webkit-tap-highlight-color: transparent;
+}
+html[data-layout="compact"] body {
+  overscroll-behavior: none;
+}
+html[data-layout="compact"] .project-card,
+html[data-layout="compact"] .exp-track .project-card {
+  width: var(--cw);
+}
+html[data-layout="compact"] .panel {
+  backdrop-filter: none; /* blur is costly on phones; the panel fill is dark enough */
+  background: linear-gradient(160deg, rgb(23 26 32 / 0.6), rgb(8 8 10 / 0.86));
+}
+html[data-layout="compact"] .text-pool::before {
+  inset: -14px -18px;
+}
+
+/* Rail: native touch scrolling, one card per swipe. */
+.rail-c {
+  overflow-x: auto;
+  overflow-y: hidden;
+  scrollbar-width: none;
+  scroll-snap-type: x mandatory;
+  scroll-padding-left: 16px;
+  touch-action: pan-x;
+  overscroll-behavior-x: contain;
+  -webkit-overflow-scrolling: touch;
+}
+.rail-c::-webkit-scrollbar {
+  display: none;
+}
+.rail-c [data-slot] {
+  scroll-snap-align: start;
+  scroll-snap-stop: always;
+  transition: opacity 0.35s, transform 0.35s var(--ease-out);
+}
+.rail-c [data-slot]:not([data-focus]) {
+  opacity: 0.45;
+  transform: scale(0.965);
+}
+
+/* Diagram inside the detail sheet: drawn at a readable size and panned sideways. */
+.viz-pan {
+  overflow-x: auto;
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-teal-lt) transparent;
+  touch-action: pan-x pan-y;
+}
+
+/* Experience card: the role's share of the whole career, drawn in when the card is in view. */
+.exp-seg {
+  transform: scaleX(0);
+  transform-origin: left;
+  transition: transform 0.9s var(--ease-out) 0.15s;
+}
+[data-focus] .exp-seg {
+  transform: scaleX(1);
+}
+
+/* Phone held sideways: too short for the layout, ask for portrait. */
+@media (orientation: landscape) and (max-height: 500px) and (pointer: coarse) {
+  .rotate-hint {
+    display: grid;
+  }
+}

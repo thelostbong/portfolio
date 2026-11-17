@@ -4,10 +4,14 @@ import { useEffect } from "react";
 import dynamic from "next/dynamic";
 import { archive, languages as languageData, projects as projectData, skills as skillData, profile, experience as experienceData, education as educationData } from "@/content";
 import { LOCK_MS, SECTIONS, loop, pointer, useHud } from "@/lib/hud-store";
+import { useCompact } from "@/lib/layout";
 import Landing from "./Landing";
 import Subscreen from "./Subscreen";
 
 const Scene = dynamic(() => import("./Scene"), { ssr: false });
+// Phone layouts load only on phones; a laptop never downloads them.
+const LandingCompact = dynamic(() => import("./LandingCompact"), { ssr: false });
+const SubscreenCompact = dynamic(() => import("./SubscreenCompact"), { ssr: false });
 
 // Plain-text copy of the whole site for crawlers, screen readers and the no-WebGL case.
 function PlainContent() {
@@ -68,6 +72,7 @@ function PlainContent() {
 export default function HudApp() {
   const ready = useHud((s) => s.ready);
   const setReady = useHud((s) => s.setReady);
+  const compact = useCompact();
 
   // If WebGL or the model fails, show the HUD anyway after a few seconds.
   useEffect(() => {
@@ -136,13 +141,21 @@ export default function HudApp() {
       <div className="screen-grain pointer-events-none absolute inset-0" />
 
       <div className={`absolute inset-0 transition-opacity duration-1000 ${ready ? "opacity-100" : "opacity-0"}`}>
-        <Landing />
-        <Subscreen />
+        {compact ? <LandingCompact /> : <Landing />}
+        {compact ? <SubscreenCompact /> : <Subscreen />}
       </div>
 
       {/* Loader */}
       <div className={`pointer-events-none absolute inset-0 z-40 grid place-items-center bg-ink transition-opacity duration-700 ${ready ? "opacity-0" : "opacity-100"}`}>
         <p className="hud text-cyan">Initialising display<span className="animate-pulse"> ...</span></p>
+      </div>
+
+      {/* Phones held sideways are too short for the layout: ask for portrait (CSS shows this). */}
+      <div className="rotate-hint absolute inset-0 z-50 hidden place-items-center bg-ink">
+        <div className="flex flex-col items-center gap-3 text-center">
+          <span aria-hidden="true" className="h-12 w-7 rounded-[5px] border-2 border-cyan" />
+          <p className="hud text-bone">Turn your phone upright</p>
+        </div>
       </div>
 
       <PlainContent />

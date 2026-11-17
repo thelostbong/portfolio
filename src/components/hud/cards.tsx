@@ -8,12 +8,12 @@ import Viz from "./viz";
 
 // Every card is a fixed-size panel and never scrolls inside. Anything that does not
 // fit is in the detail panel, opened with the Details button.
-const W = "w-[min(560px,42vw)] min-w-[420px]";
-const WIDE = "w-[min(640px,47vw)] min-w-[480px]";
+const W = "w-[min(560px,42vw)] min-w-[420px] compact:w-(--cw) compact:min-w-0";
+const WIDE = "w-[min(640px,47vw)] min-w-[480px] compact:w-(--cw) compact:min-w-0";
 
 function Card({ children, tag, wide, short }: { children: ReactNode; tag: string; wide?: boolean; short?: boolean }) {
   return (
-    <article className={`rail-card panel flex shrink-0 flex-col overflow-hidden px-6 py-5 ${short ? "h-[340px] max-h-full" : "h-full"} ${wide ? WIDE : W}`}>
+    <article className={`rail-card panel flex shrink-0 flex-col overflow-hidden px-6 py-5 compact:px-4 compact:py-4 ${short ? "h-[340px] max-h-full" : "h-full"} ${wide ? WIDE : W}`}>
       <header className="flex h-9 items-center justify-between">
         <span className="hud text-cyan">{tag}</span>
       </header>
@@ -76,8 +76,8 @@ const ownRepos = archive.filter((a) => a.kind === "original");
 
 const projects = (): ReactNode[] => [
   ...projectData.map((m) => (
-    <article key={m.slug} className="project-card rail-card panel flex h-full shrink-0 flex-col overflow-hidden px-6 py-5">
-      <h2 className="font-display text-[clamp(22px,2vw,28px)] font-bold uppercase leading-none">{m.title}</h2>
+    <article key={m.slug} className="project-card rail-card panel flex h-full shrink-0 flex-col overflow-hidden px-6 py-5 compact:px-4 compact:py-4">
+      <h2 className="font-display text-[clamp(22px,2vw,28px)] font-bold uppercase leading-none compact:text-[21px] compact:leading-[1.05]">{m.title}</h2>
       <div className="mt-3 min-h-0 flex-1">
         <Viz slug={m.slug} />
       </div>
@@ -95,9 +95,9 @@ const projects = (): ReactNode[] => [
       </div>
     </article>
   )),
-  <article key="more" className="project-card rail-card panel flex h-[320px] max-h-full shrink-0 flex-col overflow-hidden px-6 py-5">
+  <article key="more" className="project-card rail-card panel flex h-[320px] max-h-full shrink-0 flex-col overflow-hidden px-6 py-5 compact:h-full compact:px-4">
     <h2 className="font-display text-[clamp(22px,2vw,28px)] font-bold uppercase leading-none">Other repositories</h2>
-    <ul className="mt-5 grid min-h-0 flex-1 grid-cols-2 content-start gap-x-10 gap-y-4 overflow-hidden">
+    <ul className="mt-5 grid min-h-0 flex-1 grid-cols-2 content-start gap-x-10 gap-y-4 overflow-hidden compact:grid-cols-1 compact:gap-y-3">
       {ownRepos.map((a) => (
         <li key={a.repo} className="flex items-baseline justify-between gap-3 border-l-2 border-rule/55 pl-3">
           <span className="truncate font-display text-[18px] font-semibold uppercase leading-tight">{a.title}</span>
@@ -165,7 +165,73 @@ const education = (): ReactNode[] => [
   </Card>,
 ];
 
-export function cardsFor(id: SectionId): ReactNode[] {
+// Phones: one card per skill group, since the four-column panel cannot fit a phone width.
+const skillsCompact = (): ReactNode[] =>
+  skillData.map((g) => (
+    <Card key={g.group} short tag={g.group}>
+      <p className="font-display text-[26px] font-semibold uppercase leading-[1.15] text-bone">{g.core.join(" / ")}</p>
+      <p className="mt-4 border-t border-rule/35 pt-4 text-[14px] leading-relaxed text-mist">{g.also.join(" · ")}</p>
+    </Card>
+  ));
+
+// Phones: the career line cannot run across one wide canvas, so each role is its own card
+// with a bar showing its share of the whole career, drawn in when the card comes into view.
+const MON = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+const monthIdx = (s: string) => Number(s.split(" ")[1]) * 12 + MON.indexOf(s.split(" ")[0]);
+const experienceCompact = (): ReactNode[] => {
+  const first = Math.min(...experienceData.map((r) => monthIdx(r.start)));
+  const last = Math.max(...experienceData.map((r) => monthIdx(r.end)));
+  const range = Math.max(1, last - first + 1);
+  return [
+    <Card key="profile" tag="Profile">
+      <h2 className="font-display text-[26px] font-bold uppercase leading-[1.04]">{profile.title}</h2>
+      <p className="mt-3 text-[14px] leading-relaxed text-bone/90">{profile.summary}</p>
+      <dl className="mt-auto grid grid-cols-3 gap-3 border-t border-rule/35 pt-4">
+        {[
+          ["2 yrs", "DevOps and cloud"],
+          ["2", "research roles"],
+          ["1.8", "M.Eng grade"],
+        ].map(([v, l]) => (
+          <div key={l}>
+            <dd className="font-display text-[28px] font-semibold leading-none text-cyan">{v}</dd>
+            <dt className="hud mt-1.5 text-[9.5px] leading-snug text-mist">{l}</dt>
+          </div>
+        ))}
+      </dl>
+    </Card>,
+    ...experienceData.map((r) => {
+      const a = (monthIdx(r.start) - first) / range;
+      const b = (monthIdx(r.end) - first + 1) / range;
+      return (
+        <Card key={r.id} tag={`${r.start} to ${r.end} // ${r.duration}`}>
+          <h2 className="font-display text-[23px] font-bold uppercase leading-[1.05]">{r.title}</h2>
+          <p className="hud mt-1.5 text-mist">{r.org}{" // "}{r.place}</p>
+          <div className="mt-3 flex items-center gap-4">
+            <div className="relative h-[3px] flex-1 bg-rule/25" aria-label={`${r.duration} of the career shown`}>
+              <div className="exp-seg absolute inset-y-0 bg-cyan" style={{ left: `${a * 100}%`, width: `${(b - a) * 100}%` }} />
+            </div>
+            <DetailsButton k={r.id} label="Details" />
+          </div>
+          <ul className="mt-2 space-y-2.5">
+            {r.proof.map((pf) => (
+              <li key={pf.hero} className="grid grid-cols-[76px_1fr] gap-3 border-t border-rule/30 pt-2.5">
+                <div>
+                  <p className="font-display text-[22px] font-semibold leading-none text-cyan">{pf.hero}</p>
+                  <p className="hud mt-1 text-[9px] leading-snug text-mist">{pf.cap}</p>
+                </div>
+                <p className="line-clamp-3 text-[13px] leading-snug text-bone/90">{pf.line}</p>
+              </li>
+            ))}
+          </ul>
+        </Card>
+      );
+    }),
+  ];
+};
+
+export function cardsFor(id: SectionId, compact = false): ReactNode[] {
+  if (compact && id === "skills") return skillsCompact();
+  if (compact && id === "experience") return experienceCompact();
   switch (id) {
     case "experience":
       return experience();

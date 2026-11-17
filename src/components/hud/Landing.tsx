@@ -14,7 +14,7 @@ const CALLOUTS: Callout[] = [
   { id: "skills", side: "right", top: "44%", meta: "MLOps, Kubernetes, AWS, computer vision" },
 ];
 
-const TAGLINE = "I ship ML and keep it running.";
+export const TAGLINE = "I ship ML and keep it running.";
 
 const pad = (n: number) => String(n).padStart(2, "0");
 
@@ -89,7 +89,7 @@ function TerrainMap() {
   return <canvas ref={ref} className="h-[150px] w-[240px]" aria-hidden="true" />;
 }
 
-const FOOTER_LINKS = [
+export const FOOTER_LINKS = [
   { label: "Email", value: profile.contact.email, href: `mailto:${profile.contact.email}` },
   { label: "LinkedIn", value: "nayeemuddin-mohammed-03", href: profile.links.linkedin },
   { label: "GitHub", value: "thelostbong", href: profile.links.github },
