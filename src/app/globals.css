@@ -438,3 +438,14 @@ html[data-layout="compact"] .text-pool::before {
   font-size: 13px; /* drawn at about 0.7x on phones: lands near 9px on screen */
   letter-spacing: 0.02em;
 }
+
+/* Bottom row of a folded scene: mirrored so the flow runs back right to left, with every
+   label flipped back in place so it still reads normally. */
+.viz-mirror {
+  transform: scaleX(-1);
+}
+.viz-mirror .viz text {
+  transform-box: fill-box;
+  transform-origin: center;
+  transform: scaleX(-1);
+}
