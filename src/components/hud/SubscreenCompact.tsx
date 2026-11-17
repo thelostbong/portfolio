@@ -224,14 +224,15 @@ export default function SubscreenCompact() {
         ))}
       </nav>
 
-      {/* Title */}
-      <div className="absolute inset-x-4" style={{ top: "calc(var(--safe-t) + 112px)" }}>
+      {/* Title. Projects skips it: the switcher already names the section, and the
+          folded scenes need the height. */}
+      <div className={`absolute inset-x-4 ${active === "projects" ? "hidden" : ""}`} style={{ top: "calc(var(--safe-t) + 112px)" }}>
         <h2 className="sub-head font-display text-[38px] font-bold uppercase leading-[0.9] tracking-wide">{section.label}</h2>
         <p className="sub-head hud mt-1.5 line-clamp-2 text-[10px] leading-snug text-mist">{SECTION_BLURB[active]}</p>
       </div>
 
       {/* Rail */}
-      <div ref={railRef} className="rail-c absolute inset-x-0" style={{ top: "calc(var(--safe-t) + 196px)", bottom: "calc(var(--safe-b) + 62px)" }}>
+      <div ref={railRef} className="rail-c absolute inset-x-0" style={{ top: active === "projects" ? "calc(var(--safe-t) + 116px)" : "calc(var(--safe-t) + 196px)", bottom: "calc(var(--safe-b) + 62px)" }}>
         <div className="flex h-full w-max items-stretch gap-3 pl-4" style={{ paddingRight: "40px" }}>
           {cards.map((c, i) => (
             <div key={i} data-slot className="flex h-full shrink-0 items-center">

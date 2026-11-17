@@ -426,3 +426,15 @@ html[data-layout="compact"] .text-pool::before {
     display: grid;
   }
 }
+
+/* Folded project scene on phones: no frame of its own, the card is the frame. */
+.viz-fold .viz {
+  min-height: 0;
+  border: 0;
+  background: transparent;
+}
+/* Except the fashion pipeline, whose labels are spaced for 11. */
+.viz-fold:not([data-scene="threadline"]) .viz .vz-t {
+  font-size: 13px; /* drawn at about 0.7x on phones: lands near 9px on screen */
+  letter-spacing: 0.02em;
+}

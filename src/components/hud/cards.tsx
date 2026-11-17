@@ -4,7 +4,11 @@ import type { ReactNode } from "react";
 import type { Stat } from "@/content";
 import { archive, languages as languageData, projects as projectData, skills as skillData, profile, experience as experienceData, education as educationData } from "@/content";
 import { useHud, type SectionId } from "@/lib/hud-store";
+import dynamic from "next/dynamic";
 import Viz from "./viz";
+
+// Phone-only: the folded project scene. Loaded on phones only.
+const VizFold = dynamic(() => import("./VizFold"), { ssr: false });
 
 // Every card is a fixed-size panel and never scrolls inside. Anything that does not
 // fit is in the detail panel, opened with the Details button.
@@ -229,7 +233,32 @@ const experienceCompact = (): ReactNode[] => {
   ];
 };
 
+// Phones: title, the scene folded into two rows at the full card width, the headline
+// numbers and the two links. The stack chips are in the Details sheet.
+const projectsCompact = (): ReactNode[] => {
+  // The last card (other repositories) is shared with the wide layout.
+  return [
+    ...projectData.map((m) => (
+      <article key={m.slug} className="project-card rail-card panel flex h-full shrink-0 flex-col overflow-hidden px-4 py-4">
+        <h2 className="font-display text-[21px] font-bold uppercase leading-[1.05]">{m.title}</h2>
+        <div className="-mx-4 mt-3 min-h-0 flex-1 px-1.5">
+          <VizFold slug={m.slug} />
+        </div>
+        <div className="mt-3">
+          <MetricsLine text={m.metricsLine} />
+        </div>
+        <div className="mt-2 flex flex-wrap items-center gap-6">
+          <DetailsButton k={m.slug} />
+          {m.repo ? <Link href={`${profile.links.github}/${m.repo}`}>Repository</Link> : m.repoUrl ? <Link href={m.repoUrl}>Team repository</Link> : null}
+        </div>
+      </article>
+    )),
+    ...projects().slice(projectData.length),
+  ];
+};
+
 export function cardsFor(id: SectionId, compact = false): ReactNode[] {
+  if (compact && id === "projects") return projectsCompact();
   if (compact && id === "skills") return skillsCompact();
   if (compact && id === "experience") return experienceCompact();
   switch (id) {
