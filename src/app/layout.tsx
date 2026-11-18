@@ -14,7 +14,7 @@ const title = `${profile.name} | ${profile.title}`;
 const shareDescription =
   "AI infrastructure and MLOps engineer in Germany. Production DevOps and cloud at Tata Consultancy Services, now computer vision and edge AI at TH Deggendorf.";
 const preview = {
-  url: "/og.jpg",
+  url: "/og-v2.jpg",
   width: 1200,
   height: 630,
   alt: `${profile.name}, ${profile.title}`,
